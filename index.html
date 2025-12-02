@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crypto Live Dashboard — PnL Enabled</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0f1724;--card:#111827;--muted:#9ca3af;--green:#10b981;--red:#ef4444;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{margin:0;background:linear-gradient(180deg,#071029 0%, #071521 100%);color:#e6eef8;min-height:100vh;padding:20px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .search{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-size:12px;color:var(--muted);text-align:left;padding:8px 12px}
+    tbody td{padding:10px 12px;border-top:1px solid rgba(255,255,255,0.02);vertical-align:middle}
+    .coin{display:flex;align-items:center;gap:12px}
+    .avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0ea5a3,#60a5fa);display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+    .pair{font-weight:600}
+    .price{font-variant-numeric:tabular-nums}
+    .change.positive{color:var(--green)}
+    .change.negative{color:var(--red)}
+    .spark{width:120px;height:36px}
+    .muted{color:var(--muted);font-size:13px}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    .topbar{display:flex;gap:10px;align-items:center}
+    .btn{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02);cursor:pointer}
+    .chart-modal{position:fixed;inset:0;background:rgba(2,6,23,0.7);display:flex;align-items:center;justify-content:center;z-index:40}
+    .chart-box{width:90%;max-width:1000px;background:#071223;padding:16px;border-radius:12px}
+    .close{float:right;cursor:pointer}
+    @media (max-width:1100px){.spark{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Crypto Live — Real-time Prices</h1>
+      <div class="muted">Live updates via Binance WebSocket · USD + INR · PnL vs Binance included</div>
+    </div>
+    <div class="controls">
+      <input id="search" class="search" placeholder="Search coin, e.g. BTC" />
+      <select id="exchangeFilter" class="search" style="width:160px">
+        <option value="all">Show: All Exchanges</option>
+        <option value="binance">Binance</option>
+        <option value="wazirx">WazirX</option>
+        <option value="coindcx">CoinDCX</option>
+      </select>
+      <select id="pageSize" class="search" style="width:120px">
+        <option value="10">10 / page</option>
+        <option value="25">25 / page</option>
+        <option value="50">50 / page</option>
+      </select>
+      <button id="toggleSpark" class="btn">Toggle Sparklines</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Coin</th>
+          <th>Price (USD)</th>
+          <th>Price (INR)</th>
+          <th>WazirX (INR)</th>
+          <th>CoinDCX (INR)</th>
+          <th>PnL vs Binance (%)</th>
+          <th>24h Change</th>
+          <th>24h Volume</th>
+          <th>Spark</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <!-- rows injected here -->
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="muted">Tip: Save as <code>crypto-live.html</code> and open in your browser. Some APIs may be blocked by CORS in your browser — run from a static server if needed.</footer>
+
+  <div id="chartModal" class="chart-modal" style="display:none">
+    <div class="chart-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 id="chartTitle" style="margin:0">Chart</h3>
+        <div style="color:var(--muted);cursor:pointer" id="closeChart">Close ✖</div>
+      </div>
+      <canvas id="fullChart" width="1000" height="400"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const PAIRS = ['btcusdt','ethusdt','bnbusdt','xrpusdt','adausdt','solusdt','dogeusdt','ltcusdt','maticusdt','dotusdt'];
+    const INDIAN_MAP = { 'btcusdt':'btcinr','ethusdt':'ethinr','bnbusdt':'bnbinr','xrpusdt':'xrpinr','adausdt':'adainr','solusdt':'solinr','dogeusdt':'dogeinr','ltcusdt':'ltcinr','maticusdt':'maticinr','dotusdt':'dotinr' };
+
+    let inrRate = 85; // fallback
+    async function fetchINRRate(){
+      try{
+        const r = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
+        const j = await r.json();
+        if(j && j.rates && j.rates.INR) inrRate = j.rates.INR;
+      }catch(e){ console.warn('INR rate fetch failed', e); }
+    }
+
+    async function fetchWazirX(symbolINR){
+      try{ const res = await fetch('https://api.wazirx.com/api/v2/tickers'); const j = await res.json(); if(j && j[symbolINR]) return parseFloat(j[symbolINR].last); }catch(e){}
+      return null;
+    }
+
+    async function fetchCoinDCX(symbolINR){
+      try{ const res = await fetch('https://public.coindcx.com/market_data/tickers'); const j = await res.json(); if(Array.isArray(j)){ const base = symbolINR.replace('inr','').toUpperCase(); const found = j.find(it=>it.market==='INR' && it.ticker && it.base_unit && it.base_unit.toUpperCase()===base); if(found && found.last) return parseFloat(found.last); } }catch(e){}
+      return null;
+    }
+
+    const state = {}; const MAX_POINTS = 80; let showSparks = true;
+    const tbody = document.getElementById('tbody'); const search = document.getElementById('search'); const toggleSpark = document.getElementById('toggleSpark');
+
+    function createRow(pair){
+      const symbol = pair.toUpperCase();
+      const tr = document.createElement('tr'); tr.id = 'row-'+pair; tr.style.cursor='pointer';
+      tr.innerHTML = `
+        <td>
+          <div class="coin"><div class="avatar">${symbol.slice(0,3)}</div><div>
+            <div class="pair">${symbol}</div>
+            <div class="muted" id="sub-${pair}"></div>
+          </div></div>
+        </td>
+        <td><div class="price" id="priceUSD-${pair}">—</div></td>
+        <td><div class="price" id="priceINR-${pair}">—</div></td>
+        <td><div class="price" id="wazirx-${pair}">—</div></td>
+        <td><div class="price" id="coindcx-${pair}">—</div></td>
+        <td><div id="pnl-${pair}" class="muted">—</div></td>
+        <td><div id="change-${pair}" class="change muted">—</div></td>
+        <td><div id="vol-${pair}" class="muted">—</div></td>
+        <td><canvas class="spark" id="spark-${pair}" width="120" height="36"></canvas></td>
+      `;
+      tr.addEventListener('click',()=>openChart(pair));
+      return tr;
+    }
+
+    function getFilteredPairs(){ const q = (search.value||'').trim().toLowerCase(); const exc = document.getElementById('exchangeFilter').value; return PAIRS.filter(p=>{ if(q && !p.includes(q)) return false; if(exc==='all') return true; if(exc==='binance') return true; if(exc==='wazirx' || exc==='coindcx') return !!INDIAN_MAP[p]; return true; }); }
+
+    let currentPage = 1;
+    function renderPage(){ const pageSize = Number(document.getElementById('pageSize').value); const filtered = getFilteredPairs(); const total = filtered.length; const totalPages = Math.max(1, Math.ceil(total / pageSize)); if(currentPage>totalPages) currentPage = totalPages; const start=(currentPage-1)*pageSize; const end=start+pageSize; tbody.innerHTML=''; filtered.slice(start,end).forEach(p=>{ if(!state[p]) state[p]={prices:[]}; tbody.appendChild(createRow(p)); }); renderPager(totalPages); filtered.slice(start,end).forEach(p=>{ const canvas=document.getElementById('spark-'+p); drawSpark(canvas,state[p].prices||[]); }); }
+
+    function renderPager(totalPages){ let pager=document.getElementById('pager'); if(pager) pager.remove(); pager=document.createElement('div'); pager.id='pager'; pager.style.display='flex'; pager.style.gap='8px'; pager.style.marginTop='10px'; const prev=document.createElement('button'); prev.textContent='Prev'; prev.className='btn'; prev.onclick=()=>{ if(currentPage>1){ currentPage--; renderPage(); } }; const next=document.createElement('button'); next.textContent='Next'; next.className='btn'; next.onclick=()=>{ if(currentPage<totalPages){ currentPage++; renderPage(); } }; const info=document.createElement('div'); info.className='muted'; info.style.alignSelf='center'; info.textContent=`Page ${currentPage} / ${totalPages}`; pager.appendChild(prev); pager.appendChild(info); pager.appendChild(next); document.querySelector('.card').appendChild(pager); }
+
+    search.addEventListener('input',()=>{ currentPage=1; renderPage(); }); document.getElementById('exchangeFilter').addEventListener('change',()=>{ currentPage=1; renderPage(); }); document.getElementById('pageSize').addEventListener('change',()=>{ currentPage=1; renderPage(); }); toggleSpark.addEventListener('click',()=>{ showSparks=!showSparks; document.querySelectorAll('.spark').forEach(c=>c.style.display=showSparks?'':'none'); toggleSpark.textContent = showSparks?'Toggle Sparklines':'Show Sparklines'; });
+
+    function drawSpark(canvas,arr){ if(!canvas||!arr||arr.length<2) return; const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height; ctx.clearRect(0,0,w,h); const min=Math.min(...arr),max=Math.max(...arr),range=max-min||1; ctx.lineWidth=2; ctx.beginPath(); ctx.strokeStyle=arr[arr.length-1]>=arr[0]?'#10b981':'#ef4444'; arr.forEach((v,i)=>{ const x=(i/(arr.length-1))*(w-2)+1; const y=h-((v-min)/range)*(h-4)-2; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }); ctx.stroke(); }
+
+    function nf(n){return Number(n).toLocaleString(undefined,{maximumFractionDigits:8});}
+    function nf2(n){return Number(n).toLocaleString(undefined,{maximumFractionDigits:2});}
+
+    async function fetchInitial(){
+      try{
+        const symbols = PAIRS.map(p=>'"'+p.toUpperCase()+'"').join(',');
+        const url='https://api.binance.com/api/v3/ticker/24hr?symbols=['+symbols+']';
+        const res=await fetch(url); const data=await res.json();
+        data.forEach(d=>{
+          const pair=d.symbol.toLowerCase(); if(!state[pair]) state[pair]={prices:[]}; const price=parseFloat(d.lastPrice); state[pair].prices=Array(8).fill(price);
+          const usdEl=document.getElementById('priceUSD-'+pair); if(usdEl) usdEl.textContent=nf(price);
+          const inrEl=document.getElementById('priceINR-'+pair); if(inrEl) inrEl.textContent=nf(price*inrRate);
+          const pct=parseFloat(d.priceChangePercent||0); const changeEl=document.getElementById('change-'+pair); if(changeEl){ changeEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%'; changeEl.className='change '+(pct>=0?'positive':'negative'); }
+          const volEl=document.getElementById('vol-'+pair); if(volEl) volEl.textContent=nf2(parseFloat(d.volume)); const subEl=document.getElementById('sub-'+pair); if(subEl) subEl.textContent='Open: '+nf(parseFloat(d.openPrice)); drawSpark(document.getElementById('spark-'+pair),state[pair].prices);
+          (async ()=>{ const inrKey=INDIAN_MAP[pair]; if(inrKey){ const wz=await fetchWazirX(inrKey); if(wz) document.getElementById('wazirx-'+pair).textContent=nf2(wz); const cd=await fetchCoinDCX(inrKey); if(cd) document.getElementById('coindcx-'+pair).textContent=nf2(cd); updatePnL(pair); } })();
+        });
+      }catch(e){console.warn('initial fetch failed',e);} }
+
+    let chartInstance=null;
+    function openChart(pair){ const modal=document.getElementById('chartModal'); const title=document.getElementById('chartTitle'); title.textContent=pair.toUpperCase()+' — Live (USD)'; modal.style.display='flex'; const dataArr=state[pair].prices.slice(); const labels=dataArr.map((_,i)=>i); const ctx=document.getElementById('fullChart').getContext('2d'); if(chartInstance) chartInstance.destroy(); chartInstance=new Chart(ctx,{ type:'line', data:{labels, datasets:[{label:pair.toUpperCase(),data:dataArr,fill:false,tension:0.1}]}, options:{animation:false,responsive:true,maintainAspectRatio:false,scales:{x:{display:false}}} }); window.activeChart={pair,chartInstance}; }
+
+    document.getElementById('closeChart').addEventListener('click',()=>{ document.getElementById('chartModal').style.display='none'; window.activeChart=null; if(chartInstance){ chartInstance.destroy(); chartInstance=null; } });
+
+    function updateFullChart(pair,price){ if(!window.activeChart || window.activeChart.pair!==pair) return; const ch=window.activeChart.chartInstance; if(!ch) return; const ds=ch.data.datasets[0].data; ds.push(price); if(ds.length>MAX_POINTS){ ds.shift(); ch.data.labels.shift(); } ch.data.labels.push(ch.data.labels.length>0?ch.data.labels[ch.data.labels.length-1]+1:0); ch.update('none'); }
+
+    // PnL calculation
+    function parseNumFromEl(el){ if(!el) return null; const t = (el.textContent||'').replace(/,/g,'').replace(/—/g,'').trim(); if(!t) return null; const v = parseFloat(t); return isNaN(v)?null:v; }
+    function updatePnL(pair){ const usdEl=document.getElementById('priceUSD-'+pair); const pnlEl=document.getElementById('pnl-'+pair); if(!usdEl||!pnlEl) return; const usdPrice=parseNumFromEl(usdEl) || 0; const wzPrice=parseNumFromEl(document.getElementById('wazirx-'+pair)); const cdPrice=parseNumFromEl(document.getElementById('coindcx-'+pair)); const binInr = usdPrice * inrRate; const pnlArr=[]; if(wzPrice) pnlArr.push(((wzPrice - binInr)/binInr)*100); if(cdPrice) pnlArr.push(((cdPrice - binInr)/binInr)*100); if(pnlArr.length===0){ pnlEl.textContent='—'; pnlEl.style.color=''; pnlEl.title='No exchange data'; return; } const avg = pnlArr.reduce((a,b)=>a+b,0)/pnlArr.length; pnlEl.textContent = (avg>=0?'+':'')+avg.toFixed(2)+'%'; pnlEl.style.color = avg>=0? 'var(--green)': 'var(--red)'; pnlEl.title = 'WazirX: '+(pnlArr[0]?pnlArr[0].toFixed(2)+'%':'—')+' | CoinDCX: '+(pnlArr[1]?pnlArr[1].toFixed(2)+'%':'—'); }
+
+    // --- WebSocket ---
+    const streams = PAIRS.map(p=>p+'@miniTicker').join('/');
+    const wsUrl = 'wss://stream.binance.com:9443/stream?streams='+streams;
+    let ws;
+    function connect(){
+      ws = new WebSocket(wsUrl);
+      ws.onopen = ()=>console.log('ws open', wsUrl);
+      ws.onmessage = async (evt) => {
+        let msg; try{ msg = JSON.parse(evt.data); }catch(e){ return; }
+        const d = msg.data || msg; if(!d) return; const pair = (d.s||'').toLowerCase();
+        const price = parseFloat(d.c || d.lastPrice || d.price || 0); if(!price || isNaN(price)) return;
+        if(!state[pair]) state[pair] = {prices:[]}; const arr = state[pair].prices; arr.push(price); if(arr.length>MAX_POINTS) arr.shift();
+        const usdEl = document.getElementById('priceUSD-'+pair); if(usdEl) usdEl.textContent = nf(price);
+        const inrEl = document.getElementById('priceINR-'+pair); if(inrEl) inrEl.textContent = nf(price * inrRate);
+        const changeEl = document.getElementById('change-'+pair); const pct = parseFloat(d.P || d.priceChangePercent || 0); if(changeEl){ changeEl.textContent = (pct>=0?'+':'') + (isNaN(pct)?'0.00':pct.toFixed(2)) + '%'; changeEl.className = 'change ' + (pct>=0?'positive':'negative'); }
+        const volEl = document.getElementById('vol-'+pair); if(volEl) volEl.textContent = nf2(parseFloat(d.v || d.volume || 0)); const subEl = document.getElementById('sub-'+pair); if(subEl) subEl.textContent = 'Open: '+nf(parseFloat(d.o || d.openPrice || 0));
+        const canvas = document.getElementById('spark-'+pair); if(canvas) drawSpark(canvas, arr);
+        updatePnL(pair);
+        if(window.activeChart && window.activeChart.pair===pair) updateFullChart(pair, price);
+      };
+      ws.onclose = ()=>{ console.warn('ws closed — reconnecting in 3s'); setTimeout(connect,3000); };
+      ws.onerror = e=>{ console.warn('ws err', e); try{ ws.close(); }catch(_){ } };
+    }
+
+    // periodic background updates for indian exchanges
+    setInterval(async ()=>{
+      for(const p of PAIRS){ const inrKey = INDIAN_MAP[p]; if(!inrKey) continue; const wz = await fetchWazirX(inrKey); if(wz) document.getElementById('wazirx-'+p).textContent = nf2(wz); const cd = await fetchCoinDCX(inrKey); if(cd) document.getElementById('coindcx-'+p).textContent = nf2(cd); updatePnL(p); }
+    },30000);
+
+    (async()=>{ await fetchINRRate(); renderPage(); await fetchInitial(); connect(); })();
+  </script>
+</body>
+</html>
