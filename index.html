@@ -1,97 +1,77 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Crypto Chart Live INR</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Live INR Chart</title>
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-  :root{--accent:#0ea5a3;}
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
-  body{background:linear-gradient(135deg,#eef2ff,#f7fff6); display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; color:#07203a;}
-  body.dark{background:linear-gradient(135deg,#071026,#07162b); color:#dbeafe;}
-  .wrap{width:100%; max-width:1200px;}
-  .top{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:8px;}
-  h1{margin:0; font-size:16px; font-weight:700;}
-  .tabs, .timeframe { display:flex; gap:8px; }
-  .tab { padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; cursor:pointer; font-weight:600; }
-  .tab.active{ background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(14,165,163,0.12); }
-  .btn { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; background:#0ea5a3; color:#012; }
-  .btn.secondary{ background:transparent; color:var(--accent); border:1px solid rgba(14,165,163,0.12); }
-  .panel{ background: rgba(255,255,255,0.9); border-radius:12px; padding:12px; box-shadow:0 12px 40px rgba(10,20,40,0.06); }
-  body.dark .panel{ background: rgba(8,12,20,0.75); box-shadow:none; }
-  #chart-area{ display:flex; gap:12px; align-items:flex-start; }
-  #chart{ flex:1; min-height:520px; }
-  .side{ width:260px; display:flex; flex-direction:column; gap:8px; }
-  .card{ padding:10px; border-radius:8px; background: rgba(255,255,255,0.9); }
-  body.dark .card{ background: rgba(255,255,255,0.03); }
-  .muted{ font-size:12px; color:rgba(0,0,0,0.45); }
-  .value{ font-weight:700; font-size:18px; }
-  .controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .small-input{ width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.08); }
-  @media (max-width: 900px){ #chart{ min-height:420px; } .side{ display:none; } }
+  /* BASIC STYLES */
+  body{margin:0;font-family:Inter,system-ui;display:flex;flex-direction:column;align-items:center;background:#eef2ff;color:#07203a;}
+  body.dark{background:#071026;color:#dbeafe;}
+  .wrap{width:100%;max-width:1200px;padding:12px;}
+  .top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
+  .tabs{display:flex;gap:6px;}
+  .tab{padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);}
+  .tab.active{background:#0ea5a3;color:#fff;border-color:transparent;}
+  .btn{padding:6px 10px;border-radius:6px;cursor:pointer;background:#0ea5a3;color:#012;border:none;}
+  .panel{background:rgba(255,255,255,0.9);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;}
+  body.dark .panel{background:rgba(0,0,0,0.6);}
+  #chart{width:100%;height:480px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-      <h1>Crypto Chart Live INR</h1>
+    <div>
       <div class="tabs" id="coinTabs">
-        <button class="tab active" data-coin="BTC">BTC</button>
-        <button class="tab" data-coin="ETH">ETH</button>
-        <button class="tab" data-coin="SOL">SOL</button>
-        <button class="tab" data-coin="XRP">XRP</button>
+        <div class="tab active" data-coin="BTC">BTC</div>
+        <div class="tab" data-coin="ETH">ETH</div>
+        <div class="tab" data-coin="SOL">SOL</div>
+        <div class="tab" data-coin="XRP">XRP</div>
       </div>
-      <div class="timeframe" id="tfTabs" style="margin-left:8px;">
-        <button class="tab active" data-tf="1m">1m</button>
-        <button class="tab" data-tf="5m">5m</button>
-        <button class="tab" data-tf="1h">1h</button>
+      <div class="tabs" style="margin-top:4px;" id="tfTabs">
+        <div class="tab active" data-tf="1m">1m</div>
+        <div class="tab" data-tf="5m">5m</div>
+        <div class="tab" data-tf="1h">1h</div>
       </div>
     </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <button id="toggleTheme" class="btn secondary">🌙</button>
-      <button id="fullscreenBtn" class="btn secondary">⤢</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="toggleTheme" class="btn">🌙</button>
+      <button id="fullscreenBtn" class="btn">⤢</button>
     </div>
   </div>
   <div class="panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div class="controls-row">
-        <button id="volToggle" class="tab active">Volume</button>
-        <button id="maToggle" class="tab active">MA</button>
-        <label class="muted" style="margin-left:10px;">MA1</label>
-        <input id="ma1" class="small-input" value="50" />
-        <label class="muted">MA2</label>
-        <input id="ma2" class="small-input" value="200" />
-      </div>
-      <div class="muted" id="status">Status: Connecting WS...</div>
-    </div>
-    <div id="chart-area">
-      <div id="chart"></div>
-      <div class="side">
-        <div class="card"><div class="muted">Symbol</div><div class="value" id="sym">BTCINR</div></div>
-        <div class="card"><div class="muted">Last Price</div><div class="value" id="lastPrice">-</div></div>
-        <div class="card"><div class="muted">24h Vol (approx)</div><div class="value" id="vol24">-</div></div>
-        <div class="card"><div class="muted">MA (current)</div><div class="value" id="ma50Val">- / <span id="ma200Val">-</span></div></div>
-        <div class="card"><div class="muted">Last update</div><div id="lastUpdate">-</div></div>
-      </div>
-    </div>
+    <div id="chart"></div>
   </div>
 </div>
 
 <script>
-const symbolMap = { BTC:'btcinr', ETH:'ethinr', SOL:'solinr', XRP:'xrpinr' };
-let currentCoin='BTC', currentTF='1m';
-let chart, candleSeries, volumeSeries, maShortSeries, maLongSeries;
-let ws = null, showVolume=true, showMA=true, lastCandles=[];
+/* CONFIG */
+const symbolMap={BTC:'btcinr',ETH:'ethinr',SOL:'solinr',XRP:'xrpinr'};
+let currentCoin='BTC',currentTF='1m',chart,candleSeries,volumeSeries,ma50Series,ma200Series,lastCandles=[],ws=null;
+
+/* CREATE CHART */
+function createChart(isDark=false){
+  if(chart) chart.remove();
+  chart=LightweightCharts.createChart(document.getElementById('chart'),{
+    width:document.getElementById('chart').clientWidth,
+    height:480,
+    layout:{backgroundColor:isDark?'#071026':'transparent',textColor:isDark?'#dbeafe':'#07203a'},
+    grid:{vertLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'},
+          horzLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'}},
+    rightPriceScale:{visible:true,borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'},
+    timeScale:{borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'}
+  });
+  candleSeries=chart.addCandlestickSeries({upColor:'#16a34a',downColor:'#ef4444',wickUpColor:'#16a34a',wickDownColor:'#ef4444'});
+  volumeSeries=chart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume',scaleMargins:{top:0.8,bottom:0}});
+  ma50Series=chart.addLineSeries({color:'#60a5fa',lineWidth:2});
+  ma200Series=chart.addLineSeries({color:'#f59e0b',lineWidth:2});
+}
 
 /* UTIL */
-function fmt(n){ if(n==null) return '-'; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return Number(n).toFixed(2);}
-function nowStr(){ return new Date().toLocaleString();}
-
-/* MA calculation */
-function calcMA(data, period){
-  const out=[]; let sum=0;
+function calcMA(data,period){
+  let out=[],sum=0;
   for(let i=0;i<data.length;i++){
     sum+=data[i].close;
     if(i>=period) sum-=data[i-period].close;
@@ -100,121 +80,69 @@ function calcMA(data, period){
   return out;
 }
 
-/* Chart setup */
-function createChart(isDark=false){
-  if(chart) chart.remove();
-  const container=document.getElementById('chart');
-  chart=LightweightCharts.createChart(container,{
-    width:container.clientWidth,
-    height:container.clientHeight||520,
-    layout:{backgroundColor:isDark?'#071026':'transparent',textColor:isDark?'#dbeafe':'#07203a'},
-    grid:{vertLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'},horzLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'}},
-    rightPriceScale:{visible:true,borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'},
-    timeScale:{borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'}
-  });
-  candleSeries=chart.addCandlestickSeries({upColor:'#16a34a',borderUpColor:'#16a34a',wickUpColor:'#16a34a',downColor:'#ef4444',borderDownColor:'#ef4444',wickDownColor:'#ef4444'});
-  volumeSeries=chart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume',scaleMargins:{top:0.8,bottom:0},overlay:false});
-  maShortSeries=chart.addLineSeries({color:'#60a5fa',lineWidth:2});
-  maLongSeries=chart.addLineSeries({color:'#f59e0b',lineWidth:2});
-  window.addEventListener('resize',()=>chart.applyOptions({width:container.clientWidth,height:container.clientHeight||520}));
+/* FETCH HISTORICAL (via CORS proxy for GitHub Pages) */
+async function fetchKlines(coin,tf,limit=500){
+  const sym=symbolMap[coin];
+  const url=`https://corsproxy.io/?https://api.wazirx.com/api/v2/kline?symbol=${sym}&interval=${tf}&limit=${limit}`;
+  const res=await fetch(url); const data=await res.json();
+  return data.map(c=>({time:Math.floor(c[0]/1000),open:+c[1],high:+c[2],low:+c[3],close:+c[4],volume:+c[5]}));
 }
 
-/* -----------------------
-  WS CONNECT
------------------------ */
+/* RENDER FULL */
+async function renderFull(){
+  lastCandles=await fetchKlines(currentCoin,currentTF,500);
+  candleSeries.setData(lastCandles.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
+  volumeSeries.setData(lastCandles.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'})));
+  ma50Series.setData(calcMA(lastCandles,50));
+  ma200Series.setData(calcMA(lastCandles,200));
+}
+
+/* WEBSOCKET */
 function startWS(){
   if(ws){ ws.close(); ws=null; }
-  const url='wss://stream.wazirx.com/ws';
-  ws=new WebSocket(url);
-  ws.onopen=()=>{ document.getElementById('status').innerText='WS Connected'; subscribeWS(); };
+  ws=new WebSocket('wss://stream.wazirx.com/ws');
+  ws.onopen=()=>{ ws.send(JSON.stringify({method:"SUBSCRIBE",params:[`${symbolMap[currentCoin]}@kline_${currentTF}`],id:1})); };
   ws.onmessage=e=>{
     const d=JSON.parse(e.data);
-    if(d.k){ // kline
+    if(d.k){
       const k=d.k;
-      const candle={time:Math.floor(k.t/1000),open:parseFloat(k.o),high:parseFloat(k.h),low:parseFloat(k.l),close:parseFloat(k.c),volume:parseFloat(k.v)};
+      const candle={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v};
       const idx=lastCandles.findIndex(c=>c.time===candle.time);
-      if(idx>=0){ lastCandles[idx]=candle; candleSeries.update(candle); if(showVolume) volumeSeries.update({time:candle.time,value:candle.volume,color:candle.close>=candle.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}); }
-      else { lastCandles.push(candle); candleSeries.update(candle); if(showVolume) volumeSeries.update({time:candle.time,value:candle.volume,color:candle.close>=candle.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}); }
-      if(showMA){ const ma1=parseInt(document.getElementById('ma1').value)||50; const ma2=parseInt(document.getElementById('ma2').value)||200;
-        maShortSeries.setData(calcMA(lastCandles,ma1)); maLongSeries.setData(calcMA(lastCandles,ma2)); markCrosses(calcMA(lastCandles,ma1),calcMA(lastCandles,ma2)); }
-      document.getElementById('lastPrice').innerText=candle.close.toLocaleString('en-IN',{maximumFractionDigits:2});
-      document.getElementById('lastUpdate').innerText=nowStr();
+      if(idx>=0) lastCandles[idx]=candle;
+      else lastCandles.push(candle);
+      candleSeries.update(candle);
+      volumeSeries.update({time:candle.time,value:candle.volume,color:candle.close>=candle.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'});
+      ma50Series.setData(calcMA(lastCandles,50));
+      ma200Series.setData(calcMA(lastCandles,200));
     }
   };
-  ws.onclose=()=>{ document.getElementById('status').innerText='WS Disconnected, reconnecting...'; setTimeout(startWS,3000); };
+  ws.onclose=()=>setTimeout(startWS,3000);
   ws.onerror=()=>{ ws.close(); };
 }
 
-function subscribeWS(){
-  if(!ws || ws.readyState!==1) return;
-  const sym=symbolMap[currentCoin];
-  const subMsg={"method":"SUBSCRIBE","params":[`${sym}@kline_${currentTF}`],"id":1};
-  ws.send(JSON.stringify(subMsg));
-}
-
-/* -----------------------
-  Render historical via REST first
------------------------ */
-async function fetchKlinesREST(coin,tf,limit=500){
-  const sym=symbolMap[coin];
-  const url=`https://api.wazirx.com/api/v2/kline?symbol=${sym}&interval=${tf}&limit=${limit}`;
-  const res=await fetch(url); const raw=await res.json();
-  return raw.map(c=>({time:Math.floor(c[0]/1000),open:parseFloat(c[1]),high:parseFloat(c[2]),low:parseFloat(c[3]),close:parseFloat(c[4]),volume:parseFloat(c[5]||0)}));
-}
-async function renderFull(){ const klines=await fetchKlinesREST(currentCoin,currentTF,500); lastCandles=klines;
-  candleSeries.setData(klines.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
-  if(showVolume) volumeSeries.setData(klines.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}))); else volumeSeries.setData([]);
-  if(showMA){ const ma1=parseInt(document.getElementById('ma1').value)||50; const ma2=parseInt(document.getElementById('ma2').value)||200;
-    const s1=calcMA(klines,ma1); const s2=calcMA(klines,ma2); maShortSeries.setData(s1); maLongSeries.setData(s2); markCrosses(s1,s2);
-    document.getElementById('ma50Val').innerText=s1.length?s1[s1.length-1].value.toFixed(2):'-';
-    document.getElementById('ma200Val').innerText=s2.length?s2[s2.length-1].value.toFixed(2):'-';
-  }
-  const latest=klines[klines.length-1]; document.getElementById('sym').innerText=symbolMap[currentCoin].toUpperCase();
-  document.getElementById('lastPrice').innerText=latest.close.toLocaleString('en-IN',{maximumFractionDigits:2});
-  document.getElementById('vol24').innerText=fmt(klines.reduce((s,x)=>s+x.volume,0));
-  document.getElementById('lastUpdate').innerText=nowStr();
-}
-
-/* -----------------------
-  MA Cross Markers
------------------------ */
-function markCrosses(shortMA,longMA){
-  const markers=[]; const longMap=new Map(longMA.map(x=>[x.time,x.value])); const shortMap=new Map(shortMA.map(x=>[x.time,x.value]));
-  const times=shortMA.map(x=>x.time).filter(t=>longMap.has(t));
-  for(let i=1;i<times.length;i++){ const prev=times[i-1], curr=times[i];
-    const sPrev=shortMap.get(prev), lPrev=longMap.get(prev), sCurr=shortMap.get(curr), lCurr=longMap.get(curr);
-    if(sPrev<lPrev && sCurr>=lCurr) markers.push({time:curr,position:'belowBar',color:'green',shape:'arrowUp',text:'Golden'});
-    else if(sPrev>lPrev && sCurr<=lCurr) markers.push({time:curr,position:'aboveBar',color:'red',shape:'arrowDown',text:'Death'});
-  }
-  candleSeries.setMarkers(markers);
-}
-
-/* -----------------------
-  UI EVENTS
------------------------ */
-async function changeSymbolOrTF(newCoin,newTF){
-  currentCoin=newCoin||currentCoin; currentTF=newTF||currentTF;
-  document.querySelectorAll('#coinTabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.coin===currentCoin));
-  document.querySelectorAll('#tfTabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tf===currentTF));
-  createChart(document.body.classList.contains('dark'));
-  await renderFull(); startWS();
-}
-
+/* UI EVENTS */
 document.addEventListener('DOMContentLoaded',async ()=>{
   createChart(false); await renderFull(); startWS();
 
-  document.querySelectorAll('#coinTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>await changeSymbolOrTF(e.currentTarget.dataset.coin,currentTF)));
-  document.querySelectorAll('#tfTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>await changeSymbolOrTF(currentCoin,e.currentTarget.dataset.tf)));
+  document.querySelectorAll('#coinTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>{
+    currentCoin=e.currentTarget.dataset.coin;
+    document.querySelectorAll('#coinTabs .tab').forEach(t=>t.classList.toggle('active',t===btn));
+    await renderFull(); startWS();
+  }));
+  document.querySelectorAll('#tfTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>{
+    currentTF=e.currentTarget.dataset.tf;
+    document.querySelectorAll('#tfTabs .tab').forEach(t=>t.classList.toggle('active',t===btn));
+    await renderFull(); startWS();
+  }));
 
-  document.getElementById('toggleTheme').addEventListener('click',async ()=>{
-    const isDark=document.body.classList.toggle('dark'); createChart(isDark); await renderFull();
+  document.getElementById('toggleTheme').addEventListener('click',()=>{
+    const isDark=document.body.classList.toggle('dark');
+    createChart(isDark); renderFull();
   });
-  document.getElementById('fullscreenBtn').addEventListener('click',async ()=>{ try{ if(!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }catch(e){} });
-
-  document.getElementById('volToggle').addEventListener('click',e=>{ showVolume=!showVolume; e.currentTarget.classList.toggle('active',showVolume); if(showVolume) volumeSeries.setData(lastCandles.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}))); else volumeSeries.setData([]); });
-  document.getElementById('maToggle').addEventListener('click',async e=>{ showMA=!showMA; e.currentTarget.classList.toggle('active',showMA); await renderFull(); });
-  document.getElementById('ma1').addEventListener('change',async ()=>{ if(showMA) await renderFull(); });
-  document.getElementById('ma2').addEventListener('change',async ()=>{ if(showMA) await renderFull(); });
+  document.getElementById('fullscreenBtn').addEventListener('click',async ()=>{
+    if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else await document.exitFullscreen();
+  });
 });
 </script>
 </body>
