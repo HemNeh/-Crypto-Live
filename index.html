@@ -2,514 +2,449 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Pro Crypto Chart — Full</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Lightweight Charts (standalone build) -->
+  <title>Crypto Chart INR (WS · Volume · MA · Cross)</title>
+
+  <!-- Lightweight Charts -->
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
   <style>
-    :root{
-      --bg-dark: #071322;
-      --panel-dark: #0b1a26;
-      --text-light: #cfe3f1;
-      --muted: #93a7b5;
-      --accent: #60a5fa;
-      --green: #26a69a;
-      --red: #ff4976;
-      --glass: rgba(255,255,255,0.03);
-    }
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg-dark),#031123);color:var(--text-light)}
-    .app{max-width:1200px;margin:12px auto;padding:12px}
-    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-    .left{display:flex;gap:10px;align-items:center}
-    .tabs{display:flex;gap:6px}
-    .tab{padding:8px 12px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:var(--text-light)}
-    .tab.active{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);box-shadow:0 6px 18px rgba(2,6,23,0.5)}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{padding:8px 10px;border-radius:8px;border:none;background:linear-gradient(180deg,#113344,#0b2a3a);color:#e6eef8;cursor:pointer}
-    .badge{color:var(--muted);font-size:13px;margin-left:6px}
-    #container{background:var(--panel-dark);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-    #chart{height:520px}
-    #depth{height:160px;margin-top:10px}
-    .settings-panel{position:fixed;right:18px;top:80px;background:rgba(2,8,16,0.9);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);width:260px;z-index:60}
-    .settings-panel h4{margin:0 0 8px 0;font-size:14px;color:var(--text-light)}
-    .settings-row{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
-    .input, select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text-light)}
-    .small{font-size:12px;color:var(--muted)}
-    .flex-row{display:flex;gap:8px;align-items:center}
-    .color-swatch{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);cursor:pointer}
-    .legend{display:flex;gap:8px;align-items:center;margin-top:6px}
-    @media(max-width:880px){
-      .topbar{flex-direction:column;align-items:stretch;gap:10px}
-      #chart{height:420px}
-      .settings-panel{position:static;width:100%;margin-top:10px}
-    }
+    :root{ --accent:#0ea5a3; }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
+    body{background:linear-gradient(135deg,#eef2ff,#f7fff6); display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; color:#07203a;}
+    body.dark{background:linear-gradient(135deg,#071026,#07162b); color:#dbeafe;}
+    .wrap{width:100%; max-width:1200px;}
+    .top{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:8px;}
+    h1{margin:0; font-size:16px; font-weight:700;}
+    .tabs, .timeframe { display:flex; gap:8px; }
+    .tab { padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; cursor:pointer; font-weight:600; }
+    .tab.active{ background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(14,165,163,0.12); }
+    .btn { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; background:#0ea5a3; color:#012; }
+    .btn.secondary{ background:transparent; color:var(--accent); border:1px solid rgba(14,165,163,0.12); }
+    .panel{ background: rgba(255,255,255,0.9); border-radius:12px; padding:12px; box-shadow:0 12px 40px rgba(10,20,40,0.06); }
+    body.dark .panel{ background: rgba(8,12,20,0.75); box-shadow:none; }
+    #chart-area{ display:flex; gap:12px; align-items:flex-start; }
+    #chart{ flex:1; min-height:520px; }
+    .side{ width:260px; display:flex; flex-direction:column; gap:8px; }
+    .card{ padding:10px; border-radius:8px; background: rgba(255,255,255,0.9); }
+    body.dark .card{ background: rgba(255,255,255,0.03); }
+    .muted{ font-size:12px; color:rgba(0,0,0,0.45); }
+    .value{ font-weight:700; font-size:18px; }
+    .controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .small-input{ width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.08); }
+    @media (max-width: 900px){ #chart{ min-height:420px; } .side{ display:none; } }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
-      <div class="left">
-        <div class="tabs" id="tabs"></div>
-        <div class="badge" id="pairBadge"></div>
+  <div class="wrap">
+    <div class="top">
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <h1>Crypto Chart — INR Pairs</h1>
+        <div class="tabs" id="coinTabs">
+          <button class="tab active" data-coin="BTC">BTC</button>
+          <button class="tab" data-coin="ETH">ETH</button>
+          <button class="tab" data-coin="SOL">SOL</button>
+          <button class="tab" data-coin="XRP">XRP</button>
+        </div>
+        <div class="timeframe" id="tfTabs" style="margin-left:8px;">
+          <button class="tab active" data-tf="1m">1m</button>
+          <button class="tab" data-tf="5m">5m</button>
+          <button class="tab" data-tf="1h">1h</button>
+        </div>
       </div>
 
-      <div class="controls">
-        <select id="interval" class="tab">
-          <option value="1m">1m</option>
-          <option value="5m">5m</option>
-          <option value="15m">15m</option>
-          <option value="1h">1h</option>
-          <option value="1d">1d</option>
-        </select>
-        <button id="toggleCurrency" class="btn">USD</button>
-        <button id="fullscreenBtn" class="btn">Full screen</button>
-        <div class="badge">INR rate:<strong id="inrRate" style="margin-left:6px">—</strong></div>
-      </div>
-    </div>
-
-    <div id="container">
-      <div id="chart"></div>
-      <div id="depth"></div>
-    </div>
-
-    <div style="margin-top:10px;color:var(--muted);font-size:13px">
-      Tip: Click a tab to switch pairs. Use mouse wheel or pinch to zoom; drag to pan.
-    </div>
-  </div>
-
-  <!-- Settings panel -->
-  <div class="settings-panel" id="settingsPanel" aria-hidden="false">
-    <h4>Settings</h4>
-
-    <div class="settings-row">
-      <label class="small">Theme</label>
-      <div class="flex-row">
-        <select id="themeSelect" class="input" style="width:100%">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="toggleTheme" class="btn secondary">🌙</button>
+        <button id="fullscreenBtn" class="btn secondary">⤢</button>
+        <button id="wsToggle" class="btn secondary">WS: OFF</button>
       </div>
     </div>
 
-    <div class="settings-row">
-      <label class="small">Color Preset</label>
-      <div class="flex-row">
-        <div class="color-swatch" id="preset1" title="Preset 1" style="background:linear-gradient(135deg,#60a5fa,#7dd3fc)"></div>
-        <div class="color-swatch" id="preset2" title="Preset 2" style="background:linear-gradient(135deg,#22c55e,#60a5fa)"></div>
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="controls-row">
+          <button id="volToggle" class="tab active">Volume</button>
+          <button id="maToggle" class="tab active">MA</button>
+          <label class="muted" style="margin-left:10px;">MA1</label>
+          <input id="ma1" class="small-input" value="50" />
+          <label class="muted">MA2</label>
+          <input id="ma2" class="small-input" value="200" />
+        </div>
+        <div class="muted" id="status">Status: Idle</div>
       </div>
-      <div class="small" style="margin-top:6px">Pick a color palette for candles & accents.</div>
-    </div>
 
-    <div class="settings-row">
-      <label class="small">Chart Type</label>
-      <select id="chartType" class="input">
-        <option value="candles">Candles</option>
-        <option value="line">Line</option>
-      </select>
-    </div>
+      <div id="chart-area">
+        <div id="chart"></div>
 
-    <div class="settings-row">
-      <label class="small">Data Points (max)</label>
-      <div class="flex-row">
-        <input id="pointCap" class="input" type="number" min="50" max="2000" value="600" />
+        <div class="side">
+          <div class="card">
+            <div class="muted">Symbol</div>
+            <div class="value" id="sym">BTCINR</div>
+          </div>
+          <div class="card">
+            <div class="muted">Last Price</div>
+            <div class="value" id="lastPrice">-</div>
+          </div>
+          <div class="card">
+            <div class="muted">24h Vol (approx)</div>
+            <div class="value" id="vol24">-</div>
+          </div>
+          <div class="card">
+            <div class="muted">MA (current)</div>
+            <div class="value" id="ma50Val">- / <span id="ma200Val">-</span></div>
+          </div>
+          <div class="card">
+            <div class="muted">Last update</div>
+            <div id="lastUpdate">-</div>
+          </div>
+        </div>
       </div>
-      <div class="small">Lower values use less memory. Change and click 'Apply'</div>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button id="applySettings" class="btn">Apply</button>
-      <button id="closeSettings" class="btn">Close</button>
     </div>
   </div>
 
 <script>
-/* ---------------------------
-  Full TradingView-style chart
-  - Candles + Volume
-  - Depth chart
-  - Fullscreen, zoom+pan
-  - USD/INR toggle
-  - Tabs for pairs
-  - Settings panel: theme/colors/point cap/chart type
-  - Defensive sanitization & bounded history
------------------------------*/
-
-// ========== CONFIG ==========
-const PAIRS = ['btcusdt','ethusdt','solusdt','bnbusdt','xrpusdt']; // available tabs
-let currentPair = PAIRS[0];
-let currentInterval = '1m';
-let useINR = false;
-
-// default MAX_POINTS (will be overridden by settings)
-let MAX_POINTS = 600;
-
-// cached history per pair (raw USD candles)
-const cache = {}; // cache[pair] = { candles: [ {time, open, high, low, close, volume} ], lastUpdate }
-
-// inr rate
-let inrRate = 85;
-
-// chart holders
-let mainChart, candleSeries, lineSeries, volumeSeries;
-let depthChart, bidsSeries, asksSeries;
-
-// websocket
-let ws = null;
-
-// defaults for colors / theme
-let theme = 'dark';
-let accentPreset = 1;
-let chartType = 'candles';
-
-// helper formatters
-const nf = n => Number(n).toLocaleString(undefined,{maximumFractionDigits:8});
-const nf2 = n => Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
-
-// ------- UI Elements -------
-const tabsEl = document.getElementById('tabs');
-const pairBadge = document.getElementById('pairBadge');
-const intervalEl = document.getElementById('interval');
-const toggleCurrencyBtn = document.getElementById('toggleCurrency');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-const inrRateEl = document.getElementById('inrRate');
-
-const themeSelect = document.getElementById('themeSelect');
-const preset1 = document.getElementById('preset1');
-const preset2 = document.getElementById('preset2');
-const chartTypeEl = document.getElementById('chartType');
-const pointCapEl = document.getElementById('pointCap');
-const applySettingsBtn = document.getElementById('applySettings');
-const closeSettingsBtn = document.getElementById('closeSettings');
-
-// build tabs
-function buildTabs(){
-  tabsEl.innerHTML = '';
-  PAIRS.forEach(p=>{
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (p===currentPair ? ' active' : '');
-    btn.innerText = p.toUpperCase().replace('USDT','/USDT');
-    btn.onclick = ()=> { switchPair(p); };
-    tabsEl.appendChild(btn);
-  });
-  pairBadge.innerText = currentPair.toUpperCase();
-}
-buildTabs();
-
-// ---------- Theme / Settings behavior ----------
-function applyTheme(){
-  const root = document.documentElement.style;
-  if(theme==='dark'){
-    root.setProperty('--bg-dark','#071322');
-    root.setProperty('--panel-dark','#0b1a26');
-    root.setProperty('--text-light','#cfe3f1');
-  } else {
-    root.setProperty('--bg-dark','#f6f8fa');
-    root.setProperty('--panel-dark','#ffffff');
-    root.setProperty('--text-light','#0b1220');
-  }
-  // accent presets -> change series color choices later when reinit series
-}
-
-preset1.onclick = ()=>{ accentPreset = 1; preset1.style.outline = '2px solid rgba(255,255,255,0.08)'; preset2.style.outline='none'; };
-preset2.onclick = ()=>{ accentPreset = 2; preset2.style.outline = '2px solid rgba(255,255,255,0.08)'; preset1.style.outline='none'; };
-
-applySettingsBtn.onclick = ()=>{
-  theme = themeSelect.value;
-  chartType = chartTypeEl.value;
-  const cap = Number(pointCapEl.value) || 600;
-  MAX_POINTS = Math.max(50, Math.min(2000, cap));
-  applyTheme();
-  rebuildSeries(); // re-create series with new color / chart type / cap
-  redrawMainFromCache();
-  alert('Settings applied: theme='+theme+', chart='+chartType+', points='+MAX_POINTS);
+/* =========================
+   CONFIG
+   ========================= */
+// Map UI coins to WS/REST symbols (INR)
+const symbolMap = {
+  BTC: 'btcinr',
+  ETH: 'ethinr',
+  SOL: 'solinr',
+  XRP: 'xrpinr'
 };
-closeSettingsBtn.onclick = ()=>{ document.getElementById('settingsPanel').style.display='none'; };
 
-// ---------- INR rate fetch ----------
-async function refreshINR(){
+// WebSocket base URL (CHANGE THIS to your exchange WS endpoint if different).
+// Example: 'wss://your-exchange.example/ws' — must accept Binance-style SUBSCRIBE messages.
+const WS_BASE = 'wss://stream.binance.com:9443/ws'; // default — likely doesn't support INR. Change as needed.
+
+// Kline subscribe helper (Binance-style method)
+function wsSubscribeMsg(symbol, tf){ return JSON.stringify({ method:'SUBSCRIBE', params:[`${symbol}@kline_${tf}`], id:1 }); }
+function wsUnsubscribeMsg(symbol, tf){ return JSON.stringify({ method:'UNSUBSCRIBE', params:[`${symbol}@kline_${tf}`], id:1 }); }
+
+/* =========================
+   GLOBALS
+   ========================= */
+let currentCoin = 'BTC';
+let currentTF = '1m';
+let ws = null;
+let wsEnabled = false;
+let pollingTimer = null;
+let fullRefreshTimer = null;
+let lastCandles = [];
+let chart, candleSeries, volumeSeries, maShortSeries, maLongSeries;
+let showVolume = true;
+let showMA = true;
+
+/* =========================
+   UTILITIES
+   ========================= */
+function fmt(n){ if(n==null) return '-'; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return Number(n).toFixed(2); }
+function nowStr(){ return new Date().toLocaleString(); }
+
+/* =========================
+   REST KLINES (WazirX INR fallback)
+   ========================= */
+async function fetchKlinesREST(coin, tf, limit=500){
+  // Use WazirX INR klines for fallback (public REST):
+  // endpoint: https://api.wazirx.com/api/v2/kline?symbol=btcinr&interval=1m&limit=200
+  const sym = symbolMap[coin];
+  const url = `https://api.wazirx.com/api/v2/kline?symbol=${sym}&interval=${tf}&limit=${limit}`;
   try{
-    const r = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
-    const j = await r.json();
-    if(j && j.rates && j.rates.INR) inrRate = j.rates.INR;
-  }catch(e){
-    console.warn('INR fetch failed', e);
-  }
-  inrRateEl.innerText = nf2(inrRate);
-}
-refreshINR();
-setInterval(refreshINR, 60000);
-
-// ---------- Chart initialization ----------
-function initCharts(){
-  // main
-  mainChart = LightweightCharts.createChart(document.getElementById('chart'), {
-    layout: { background: { color: theme==='dark' ? '#071322' : '#f6f8fa' }, textColor: theme==='dark' ? '#cfe3f1' : '#0b1220' },
-    grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-    rightPriceScale: { borderColor: '#253240' },
-    timeScale: { borderColor: '#253240', timeVisible: true },
-    localization: { priceFormatter: price => (useINR ? nf2(price) : nf(price)) }
-  });
-
-  mainChart.applyOptions({
-    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
-    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true }
-  });
-
-  // add series placeholders
-  // create function to add the proper series depending on chartType
-  rebuildSeries();
-
-  // depth chart
-  depthChart = LightweightCharts.createChart(document.getElementById('depth'), {
-    layout: { background: { color: '#061b27' }, textColor: '#9fb5c8' },
-    height: 160,
-    rightPriceScale: { visible: false },
-    timeScale: { visible: false },
-    grid: { vertLines: { visible: false }, horzLines: { color: 'rgba(255,255,255,0.02)' } }
-  });
-  bidsSeries = depthChart.addAreaSeries({ topColor: 'rgba(38,166,154,0.2)', bottomColor: 'rgba(38,166,154,0.02)', lineColor: 'rgba(38,166,154,0.9)' });
-  asksSeries = depthChart.addAreaSeries({ topColor: 'rgba(255,73,118,0.2)', bottomColor: 'rgba(255,73,118,0.02)', lineColor: 'rgba(255,73,118,0.9)' });
-
-  // resize on fullscreen
-  document.addEventListener('fullscreenchange', ()=>{ setTimeout(()=>{ mainChart.resize(document.getElementById('chart').clientWidth, document.getElementById('chart').clientHeight); depthChart.resize(); }, 200); });
-}
-initCharts();
-
-// rebuild series (used when switching chart type or theme)
-function rebuildSeries(){
-  // destroy existing series by creating a fresh chart? LightweightCharts doesn't support removing series easily
-  // We'll remove series by setting empty data and re-adding new series types
-  try{ if(candleSeries) mainChart.removeSeries(candleSeries); }catch(e){}
-  try{ if(lineSeries) mainChart.removeSeries(lineSeries); }catch(e){}
-  try{ if(volumeSeries) mainChart.removeSeries(volumeSeries); }catch(e){}
-
-  // color choices based on preset
-  let upColor = '#26a69a', downColor = '#ff4976', accent = '#60a5fa';
-  if(accentPreset===2){ upColor = '#22c55e'; downColor = '#ff4976'; accent = '#60a5fa'; }
-
-  if(chartType==='candles'){
-    candleSeries = mainChart.addCandlestickSeries({
-      upColor, downColor, borderVisible:false, wickUpColor: upColor, wickDownColor: downColor
-    });
-  } else {
-    lineSeries = mainChart.addLineSeries({ color: accent, lineWidth: 2 });
-  }
-
-  volumeSeries = mainChart.addHistogramSeries({
-    priceFormat: { type: 'volume' },
-    priceScaleId: '',
-    scaleMargins: { top: 0.8, bottom: 0 },
-  });
-}
-
-// ========== Data fetching & caching ==========
-
-// Fetch historical klines (Binance REST)
-async function fetchHistorical(pair, interval){
-  try{
-    const url = `https://api.binance.com/api/v3/klines?symbol=${pair.toUpperCase()}&interval=${interval}&limit=1000`;
-    const r = await fetch(url);
-    const j = await r.json();
-    if(!Array.isArray(j)) return [];
-    const candles = j.map(k => ({
-      time: Math.floor(k[0]/1000),
-      open: Number(k[1]),
-      high: Number(k[2]),
-      low: Number(k[3]),
-      close: Number(k[4]),
-      volume: Number(k[5])
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('REST err '+res.status);
+    const raw = await res.json();
+    return raw.map(c => ({
+      time: Math.floor(c[0]/1000),
+      open: parseFloat(c[1]),
+      high: parseFloat(c[2]),
+      low: parseFloat(c[3]),
+      close: parseFloat(c[4]),
+      volume: parseFloat(c[5] ?? 0)
     }));
-    cache[pair] = cache[pair] || { candles: [] };
-    cache[pair].candles = candles.slice(-MAX_POINTS);
-    cache[pair].lastUpdate = Date.now();
-    return cache[pair].candles;
   }catch(e){
-    console.warn('fetch historical failed', e);
+    console.error('fetchKlinesREST error', e);
     return [];
   }
 }
 
-// sanitize + cap + convert to INR or USD when drawing
-function getCleanSeries(pair){
-  const raw = cache[pair] && Array.isArray(cache[pair].candles) ? cache[pair].candles.slice(-MAX_POINTS) : [];
-  const clean = raw.filter(c => Number.isFinite(c.close) && c.close>0).map(c=>{
-    const factor = useINR ? inrRate : 1;
-    return { time: c.time, open: c.open*factor, high: c.high*factor, low: c.low*factor, close: c.close*factor, volume: c.volume };
+/* =========================
+   MA helper
+   ========================= */
+function calcMA(data, period){
+  const out = []; let sum = 0;
+  for(let i=0;i<data.length;i++){
+    sum += data[i].close;
+    if(i >= period) sum -= data[i-period].close;
+    if(i >= period-1) out.push({ time: data[i].time, value: sum/period });
+  }
+  return out;
+}
+
+/* =========================
+   Chart creation
+   ========================= */
+function createChart(isDark=false){
+  if(chart) chart.remove();
+  const container = document.getElementById('chart');
+  chart = LightweightCharts.createChart(container, {
+    width: container.clientWidth,
+    height: container.clientHeight || 520,
+    layout: { backgroundColor: isDark ? '#071026' : 'transparent', textColor: isDark ? '#dbeafe' : '#07203a' },
+    grid: { vertLines:{ color: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)' }, horzLines:{ color: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)' } },
+    rightPriceScale: { visible:true, borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#ccc' },
+    timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#ccc' }
   });
-  return clean;
+
+  candleSeries = chart.addCandlestickSeries({
+    upColor: '#16a34a', borderUpColor:'#16a34a', wickUpColor:'#16a34a',
+    downColor:'#ef4444', borderDownColor:'#ef4444', wickDownColor:'#ef4444'
+  });
+
+  // Volume on separate price scale
+  volumeSeries = chart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: 'volume', // separate scale id
+    scaleMargins: { top: 0.8, bottom: 0 },
+    overlay: false
+  });
+
+  maShortSeries = chart.addLineSeries({ color:'#60a5fa', lineWidth:2 });
+  maLongSeries = chart.addLineSeries({ color:'#f59e0b', lineWidth:2 });
+
+  window.addEventListener('resize', ()=> chart && chart.applyOptions({ width: container.clientWidth, height: container.clientHeight || 520 }));
 }
 
-function redrawMainFromCache(){
-  const pair = currentPair;
-  const data = getCleanSeries(pair);
-  if(chartType==='candles' && candleSeries){
-    candleSeries.setData(data);
-  } else if(chartType==='line' && lineSeries){
-    // convert to simple line dataset using close prices
-    const lineData = data.map(d => ({ time:d.time, value: d.close }));
-    lineSeries.setData(lineData);
-  }
-  // volume
-  const vol = data.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38,166,154,0.75)' : 'rgba(255,73,118,0.75)' })).slice(-MAX_POINTS);
-  volumeSeries.setData(vol);
-}
+/* =========================
+   Render full dataset
+   ========================= */
+async function renderFull(){
+  document.getElementById('status').innerText = 'Loading...';
+  const klines = await fetchKlinesREST(currentCoin, currentTF, 500);
+  if(!klines.length){ document.getElementById('status').innerText='No data'; return; }
+  lastCandles = klines;
 
-// update cache with new kline (raw USD)
-function pushKlineToCache(pair, k){
-  cache[pair] = cache[pair] || { candles: [] };
-  const arr = cache[pair].candles;
-  const cand = {
-    time: Math.floor(k.t/1000),
-    open: Number(k.o),
-    high: Number(k.h),
-    low: Number(k.l),
-    close: Number(k.c),
-    volume: Number(k.v)
-  };
-  if(!Number.isFinite(cand.close) || cand.close<=0) return;
-  if(arr.length && arr[arr.length-1].time === cand.time){
-    arr[arr.length-1] = cand;
+  candleSeries.setData(klines.map(c=>({ time:c.time, open:c.open, high:c.high, low:c.low, close:c.close })));
+  if(showVolume) volumeSeries.setData(klines.map(c=>({ time:c.time, value:c.volume, color: c.close >= c.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' })));
+  else volumeSeries.setData([]);
+
+  const ma1 = parseInt(document.getElementById('ma1').value) || 50;
+  const ma2 = parseInt(document.getElementById('ma2').value) || 200;
+  if(showMA){
+    const s1 = calcMA(klines, ma1);
+    const s2 = calcMA(klines, ma2);
+    maShortSeries.setData(s1);
+    maLongSeries.setData(s2);
+    markCrosses(s1, s2);
+    document.getElementById('ma50Val').innerText = s1.length ? Number(s1[s1.length-1].value).toFixed(2) : '-';
+    document.getElementById('ma200Val').innerText = s2.length ? Number(s2[s2.length-1].value).toFixed(2) : '-';
   } else {
-    arr.push(cand);
+    maShortSeries.setData([]); maLongSeries.setData([]); candleSeries.setMarkers([]);
   }
-  if(arr.length > MAX_POINTS) arr.splice(0, arr.length - MAX_POINTS);
-  cache[pair].lastUpdate = Date.now();
-  // redraw after update
-  redrawMainFromCache();
+
+  const latest = klines[klines.length-1];
+  document.getElementById('sym').innerText = symbolMap[currentCoin].toUpperCase();
+  document.getElementById('lastPrice').innerText = latest.close.toLocaleString('en-IN',{maximumFractionDigits:2});
+  document.getElementById('vol24').innerText = fmt(klines.reduce((s,x)=>s+x.volume,0));
+  document.getElementById('lastUpdate').innerText = nowStr();
+  document.getElementById('status').innerText = 'Live';
 }
 
-// ---------- WebSocket (Binance Kline stream) ----------
-function klineStreamUrl(pair, interval){
-  return `wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_${interval}`;
-}
-function reconnectKline(){
-  if(ws){
-    try{ ws.close(); }catch(e){}
-    ws = null;
+/* =========================
+   Mark MA crosses
+   ========================= */
+function markCrosses(shortMA, longMA){
+  const markers = [];
+  const longMap = new Map(longMA.map(x=>[x.time,x.value]));
+  const shortMap = new Map(shortMA.map(x=>[x.time,x.value]));
+  const times = shortMA.map(x=>x.time).filter(t => longMap.has(t));
+  for(let i=1;i<times.length;i++){
+    const p = times[i-1], c = times[i];
+    const sPrev = shortMap.get(p), lPrev = longMap.get(p);
+    const sCurr = shortMap.get(c), lCurr = longMap.get(c);
+    if(sPrev < lPrev && sCurr >= lCurr){
+      markers.push({ time:c, position:'belowBar', color:'green', shape:'arrowUp', text:'Golden' });
+    } else if(sPrev > lPrev && sCurr <= lCurr){
+      markers.push({ time:c, position:'aboveBar', color:'red', shape:'arrowDown', text:'Death' });
+    }
   }
-  const url = klineStreamUrl(currentPair, currentInterval);
-  ws = new WebSocket(url);
-  ws.onopen = ()=>console.log('kline ws open', url);
-  ws.onmessage = evt => {
+  candleSeries.setMarkers(markers);
+}
+
+/* =========================
+   Polling update (fallback)
+   ========================= */
+async function updateLast(){
+  if(!lastCandles.length) return;
+  const small = await fetchKlinesREST(currentCoin, currentTF, 3);
+  if(!small.length) return;
+  const last = small[small.length-1];
+  const stored = lastCandles[lastCandles.length-1];
+  if(stored && stored.time === last.time){
+    lastCandles[lastCandles.length-1] = last;
+  } else if(stored && last.time > stored.time){
+    lastCandles.push(last);
+    if(lastCandles.length > 2000) lastCandles.shift();
+  }
+  candleSeries.update({ time:last.time, open:last.open, high:last.high, low:last.low, close:last.close });
+  if(showVolume) volumeSeries.update({ time:last.time, value:last.volume, color: last.close>=last.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' });
+  if(showMA){
+    const ma1 = parseInt(document.getElementById('ma1').value)||50;
+    const ma2 = parseInt(document.getElementById('ma2').value)||200;
+    maShortSeries.setData(calcMA(lastCandles, ma1));
+    maLongSeries.setData(calcMA(lastCandles, ma2));
+    markCrosses(calcMA(lastCandles, ma1), calcMA(lastCandles, ma2));
+  }
+  document.getElementById('lastPrice').innerText = last.close.toLocaleString('en-IN',{maximumFractionDigits:2});
+  document.getElementById('lastUpdate').innerText = nowStr();
+}
+
+/* =========================
+   WebSocket (Binance-style SUBSCRIBE JSON)
+   ========================= */
+function startWebSocket(){
+  if(ws && ws.readyState === WebSocket.OPEN) return;
+  try{ ws = new WebSocket(WS_BASE); }catch(e){ console.warn('WS open failed', e); ws = null; setWS(false); return; }
+  ws.onopen = ()=> {
+    setWS(true);
+    // subscribe
+    try{ ws.send(wsSubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){ console.warn('WS send sub failed', e); }
+    document.getElementById('status').innerText = 'WS connected';
+  };
+  ws.onmessage = (ev)=>{
     try{
-      const msg = JSON.parse(evt.data);
-      if(!msg.k) return;
-      pushKlineToCache(currentPair, msg.k);
-    }catch(e){ console.warn('kline parse err', e); }
+      const p = JSON.parse(ev.data);
+      // Binance-style kline payload shape -> p.k
+      const k = p.k ?? (p.data && p.data.k) ?? null;
+      if(k){
+        const t = Math.floor(k.t/1000);
+        const o = parseFloat(k.o), h = parseFloat(k.h), l = parseFloat(k.l), c = parseFloat(k.c), v = parseFloat(k.v||0);
+        candleSeries.update({ time:t, open:o, high:h, low:l, close:c });
+        if(showVolume) volumeSeries.update({ time:t, value:v, color: c>=o ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' });
+        if(lastCandles.length && lastCandles[lastCandles.length-1].time === t){
+          lastCandles[lastCandles.length-1] = { time:t, open:o, high:h, low:l, close:c, volume:v };
+        } else if(!lastCandles.length || t > lastCandles[lastCandles.length-1].time){
+          lastCandles.push({ time:t, open:o, high:h, low:l, close:c, volume:v });
+          if(lastCandles.length>2000) lastCandles.shift();
+        }
+        if(showMA){
+          const ma1 = parseInt(document.getElementById('ma1').value)||50;
+          const ma2 = parseInt(document.getElementById('ma2').value)||200;
+          maShortSeries.setData(calcMA(lastCandles, ma1));
+          maLongSeries.setData(calcMA(lastCandles, ma2));
+          markCrosses(calcMA(lastCandles, ma1), calcMA(lastCandles, ma2));
+        }
+        document.getElementById('lastPrice').innerText = c.toLocaleString('en-IN',{maximumFractionDigits:2});
+        document.getElementById('lastUpdate').innerText = nowStr();
+      }
+    }catch(e){}
   };
-  ws.onclose = ()=>{ console.warn('kline closed, reconnecting'); setTimeout(reconnectKline,2000); };
-  ws.onerror = e => { console.warn('kline ws error', e); };
+  ws.onerror = (e)=>{ console.warn('WS error', e); setWS(false); attemptFallbackPolling(); };
+  ws.onclose = ()=>{ setWS(false); attemptFallbackPolling(); };
 }
 
-// ---------- Depth (order book snapshot and rendering) ----------
-async function fetchAndRenderDepth(pair){
-  try{
-    const url = `https://api.binance.com/api/v3/depth?symbol=${pair.toUpperCase()}&limit=200`;
-    const res = await fetch(url);
-    const j = await res.json();
-    if(!j || !j.bids || !j.asks) return;
-    const bids = j.bids.map(b => ({ price: Number(b[0]), qty: Number(b[1]) })).sort((a,b)=>b.price-a.price);
-    const asks = j.asks.map(a => ({ price: Number(a[0]), qty: Number(a[1]) })).sort((a,b)=>a.price-b.price);
-
-    let cum = 0;
-    const bidsCum = bids.map(b => { cum += b.qty; return { price:b.price, cum: cum }; });
-    cum = 0;
-    const asksCum = asks.map(a => { cum += a.qty; return { price:a.price, cum: cum }; });
-
-    // set data for area series expecting { time: price, value: cum }
-    bidsSeries.setData(bidsCum.slice().reverse().map(x => ({ time: x.price, value: x.cum })));
-    asksSeries.setData(asksCum.map(x => ({ time: x.price, value: x.cum })));
-  }catch(e){ console.warn('depth fetch failed', e); }
+function stopWebSocket(){
+  if(!ws) return;
+  try{ ws.send(wsUnsubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){}
+  try{ ws.close(); }catch(e){}
+  ws = null; setWS(false);
 }
 
-// ---------- WazirX / CoinDCX INR support (best-effort) ----------
-async function fetchIndianPrices(pair){
-  const key = pair.toLowerCase();
-  const mapping = {
-    'btcusdt':'btcinr','ethusdt':'ethinr','bnbusdt':'bnbinr','xrpusdt':'xrpinr','solusdt':'solinr'
-  };
-  const inrKey = mapping[key];
-  let wzPrice = null, cdPrice = null;
-  try{
-    if(inrKey){
-      const r = await fetch('https://api.wazirx.com/api/v2/tickers');
-      const j = await r.json();
-      if(j && j[inrKey]) wzPrice = Number(j[inrKey].last);
-    }
-  }catch(e){}
-  try{
-    const res = await fetch('https://public.coindcx.com/market_data/tickers');
-    const arr = await res.json();
-    if(Array.isArray(arr) && inrKey){
-      const base = inrKey.replace('inr','').toUpperCase();
-      const found = arr.find(it => it.market==='INR' && it.base_unit && it.base_unit.toUpperCase()===base);
-      if(found) cdPrice = Number(found.last);
-    }
-  }catch(e){}
-  return { wzPrice, cdPrice };
+function setWS(on){
+  wsEnabled = !!on;
+  const btn = document.getElementById('wsToggle');
+  btn.innerText = on ? 'WS: ON' : 'WS: OFF';
+  btn.classList.toggle('active', on);
+  document.getElementById('status').innerText = on ? 'WS connected' : 'WS disconnected';
 }
 
-// ---------- Helpers: switch pair, redraw ----------
-async function switchPair(pair){
-  if(!PAIRS.includes(pair)) return;
-  currentPair = pair;
-  buildTabs();
-  pairBadge.innerText = currentPair.toUpperCase();
-  // load history, depth, and ws
-  await fetchHistorical(currentPair, currentInterval);
-  redrawMainFromCache();
-  await fetchAndRenderDepth(currentPair);
-  reconnectKline();
+/* =========================
+   Polling fallback & timers
+   ========================= */
+function attemptFallbackPolling(){
+  clearInterval(pollingTimer);
+  pollingTimer = setInterval(async ()=>{ if(ws && ws.readyState===WebSocket.OPEN) return; await updateLast(); }, 3000);
+}
+function startFullRefresh(){
+  clearInterval(fullRefreshTimer);
+  fullRefreshTimer = setInterval(async ()=>{ if(ws && ws.readyState===WebSocket.OPEN) return; if(!document.hasFocus()) return; await renderFull(); }, 60*1000);
 }
 
-// redraw main when currency toggle changes
-function toggleCurrency(){
-  useINR = !useINR;
-  toggleCurrencyBtn.innerText = useINR ? 'INR' : 'USD';
-  refreshINR(); // ensure fresh rate
-  redrawMainFromCache();
+/* =========================
+   UI interactions
+   ========================= */
+async function changeSymbolOrTF(newCoin, newTF){
+  // unsubscribe existing
+  if(ws && ws.readyState===WebSocket.OPEN){
+    try{ ws.send(wsUnsubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){}
+  }
+  currentCoin = newCoin || currentCoin;
+  currentTF = newTF || currentTF;
+  document.querySelectorAll('#coinTabs .tab').forEach(t=> t.classList.toggle('active', t.dataset.coin === currentCoin));
+  document.querySelectorAll('#tfTabs .tab').forEach(t=> t.classList.toggle('active', t.dataset.tf === currentTF));
+  createChart(document.body.classList.contains('dark'));
+  await renderFull();
+  if(wsEnabled) { stopWebSocket(); startWebSocket(); }
 }
 
-// fullscreen handler
-fullscreenBtn.addEventListener('click', async ()=>{
-  const el = document.getElementById('container');
-  if(!document.fullscreenElement) await el.requestFullscreen().catch(()=>{});
-  else await document.exitFullscreen().catch(()=>{});
+document.addEventListener('DOMContentLoaded', async ()=>{
+  createChart(false);
+  await renderFull();
+  attemptFallbackPolling();
+  startFullRefresh();
+
+  // coin tabs
+  document.querySelectorAll('#coinTabs .tab').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{ await changeSymbolOrTF(e.currentTarget.dataset.coin, currentTF); document.getElementById('sym').innerText = symbolMap[e.currentTarget.dataset.coin].toUpperCase(); });
+  });
+
+  // timeframe tabs
+  document.querySelectorAll('#tfTabs .tab').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{ await changeSymbolOrTF(currentCoin, e.currentTarget.dataset.tf); });
+  });
+
+  // WS toggle
+  document.getElementById('wsToggle').addEventListener('click', ()=>{
+    const turnOn = !wsEnabled;
+    if(turnOn) startWebSocket();
+    else stopWebSocket();
+  });
+
+  // theme toggle
+  document.getElementById('toggleTheme').addEventListener('click', ()=>{
+    const darkNow = !document.body.classList.toggle('dark');
+    document.body.classList.toggle('dark');
+    createChart(document.body.classList.contains('dark'));
+    renderFull();
+    document.getElementById('toggleTheme').innerText = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  });
+
+  // fullscreen
+  document.getElementById('fullscreenBtn').addEventListener('click', async ()=>{
+    try{ if(!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }catch(e){}
+  });
+
+  // volume toggle
+  document.getElementById('volToggle').addEventListener('click', (e)=>{
+    showVolume = !showVolume;
+    e.currentTarget.classList.toggle('active', showVolume);
+    if(showVolume) volumeSeries.setData(lastCandles.map(c=>({ time:c.time, value:c.volume, color:c.close>=c.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' })));
+    else volumeSeries.setData([]);
+  });
+
+  // MA toggle & changes
+  document.getElementById('maToggle').addEventListener('click', async (e)=>{
+    showMA = !showMA;
+    e.currentTarget.classList.toggle('active', showMA);
+    if(showMA) await renderFull();
+    else { maShortSeries.setData([]); maLongSeries.setData([]); candleSeries.setMarkers([]); }
+  });
+  document.getElementById('ma1').addEventListener('change', async ()=>{ if(showMA) await renderFull(); });
+  document.getElementById('ma2').addEventListener('change', async ()=>{ if(showMA) await renderFull(); });
 });
 
-// interval change
-intervalEl.addEventListener('change', ()=> {
-  currentInterval = intervalEl.value;
-  (async ()=>{ await fetchHistorical(currentPair, currentInterval); redrawMainFromCache(); reconnectKline(); })();
-});
-
-// currency toggle
-toggleCurrencyBtn.addEventListener('click', toggleCurrency);
-
-// init UI interactions
-themeSelect.value = theme;
-chartTypeEl.value = chartType;
-pointCapEl.value = MAX_POINTS;
-preset1.style.outline = '2px solid rgba(255,255,255,0.08)'; // default
-
-// ---------- Boot sequence ----------
-(async ()=>{
-  await refreshINR();
-  // fetch history for initial pair
-  await fetchHistorical(currentPair, currentInterval);
-  redrawMainFromCache();
-  await fetchAndRenderDepth(currentPair);
-  reconnectKline();
-
-  // periodic tasks
-  setInterval(()=>fetchAndRenderDepth(currentPair), 30000);
-  setInterval(()=>refreshINR(), 60000);
-})();
-
-// Ensure initial UI built
-buildTabs();
-
+/* cleanup */
+window.addEventListener('beforeunload', ()=>{ try{ stopWebSocket(); }catch(e){} clearInterval(pollingTimer); clearInterval(fullRefreshTimer); });
 </script>
 </body>
 </html>
