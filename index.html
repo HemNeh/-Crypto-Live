@@ -1,450 +1,221 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Crypto Chart INR (WS · Volume · MA · Cross)</title>
-
-  <!-- Lightweight Charts -->
-  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-
-  <style>
-    :root{ --accent:#0ea5a3; }
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
-    body{background:linear-gradient(135deg,#eef2ff,#f7fff6); display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; color:#07203a;}
-    body.dark{background:linear-gradient(135deg,#071026,#07162b); color:#dbeafe;}
-    .wrap{width:100%; max-width:1200px;}
-    .top{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:8px;}
-    h1{margin:0; font-size:16px; font-weight:700;}
-    .tabs, .timeframe { display:flex; gap:8px; }
-    .tab { padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; cursor:pointer; font-weight:600; }
-    .tab.active{ background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(14,165,163,0.12); }
-    .btn { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; background:#0ea5a3; color:#012; }
-    .btn.secondary{ background:transparent; color:var(--accent); border:1px solid rgba(14,165,163,0.12); }
-    .panel{ background: rgba(255,255,255,0.9); border-radius:12px; padding:12px; box-shadow:0 12px 40px rgba(10,20,40,0.06); }
-    body.dark .panel{ background: rgba(8,12,20,0.75); box-shadow:none; }
-    #chart-area{ display:flex; gap:12px; align-items:flex-start; }
-    #chart{ flex:1; min-height:520px; }
-    .side{ width:260px; display:flex; flex-direction:column; gap:8px; }
-    .card{ padding:10px; border-radius:8px; background: rgba(255,255,255,0.9); }
-    body.dark .card{ background: rgba(255,255,255,0.03); }
-    .muted{ font-size:12px; color:rgba(0,0,0,0.45); }
-    .value{ font-weight:700; font-size:18px; }
-    .controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .small-input{ width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.08); }
-    @media (max-width: 900px){ #chart{ min-height:420px; } .side{ display:none; } }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Crypto Chart Live INR</title>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root{--accent:#0ea5a3;}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;}
+  body{background:linear-gradient(135deg,#eef2ff,#f7fff6); display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; color:#07203a;}
+  body.dark{background:linear-gradient(135deg,#071026,#07162b); color:#dbeafe;}
+  .wrap{width:100%; max-width:1200px;}
+  .top{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:8px;}
+  h1{margin:0; font-size:16px; font-weight:700;}
+  .tabs, .timeframe { display:flex; gap:8px; }
+  .tab { padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; cursor:pointer; font-weight:600; }
+  .tab.active{ background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 6px 14px rgba(14,165,163,0.12); }
+  .btn { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; background:#0ea5a3; color:#012; }
+  .btn.secondary{ background:transparent; color:var(--accent); border:1px solid rgba(14,165,163,0.12); }
+  .panel{ background: rgba(255,255,255,0.9); border-radius:12px; padding:12px; box-shadow:0 12px 40px rgba(10,20,40,0.06); }
+  body.dark .panel{ background: rgba(8,12,20,0.75); box-shadow:none; }
+  #chart-area{ display:flex; gap:12px; align-items:flex-start; }
+  #chart{ flex:1; min-height:520px; }
+  .side{ width:260px; display:flex; flex-direction:column; gap:8px; }
+  .card{ padding:10px; border-radius:8px; background: rgba(255,255,255,0.9); }
+  body.dark .card{ background: rgba(255,255,255,0.03); }
+  .muted{ font-size:12px; color:rgba(0,0,0,0.45); }
+  .value{ font-weight:700; font-size:18px; }
+  .controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .small-input{ width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.08); }
+  @media (max-width: 900px){ #chart{ min-height:420px; } .side{ display:none; } }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <h1>Crypto Chart — INR Pairs</h1>
-        <div class="tabs" id="coinTabs">
-          <button class="tab active" data-coin="BTC">BTC</button>
-          <button class="tab" data-coin="ETH">ETH</button>
-          <button class="tab" data-coin="SOL">SOL</button>
-          <button class="tab" data-coin="XRP">XRP</button>
-        </div>
-        <div class="timeframe" id="tfTabs" style="margin-left:8px;">
-          <button class="tab active" data-tf="1m">1m</button>
-          <button class="tab" data-tf="5m">5m</button>
-          <button class="tab" data-tf="1h">1h</button>
-        </div>
+<div class="wrap">
+  <div class="top">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <h1>Crypto Chart Live INR</h1>
+      <div class="tabs" id="coinTabs">
+        <button class="tab active" data-coin="BTC">BTC</button>
+        <button class="tab" data-coin="ETH">ETH</button>
+        <button class="tab" data-coin="SOL">SOL</button>
+        <button class="tab" data-coin="XRP">XRP</button>
       </div>
-
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button id="toggleTheme" class="btn secondary">🌙</button>
-        <button id="fullscreenBtn" class="btn secondary">⤢</button>
-        <button id="wsToggle" class="btn secondary">WS: OFF</button>
+      <div class="timeframe" id="tfTabs" style="margin-left:8px;">
+        <button class="tab active" data-tf="1m">1m</button>
+        <button class="tab" data-tf="5m">5m</button>
+        <button class="tab" data-tf="1h">1h</button>
       </div>
     </div>
-
-    <div class="panel">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <div class="controls-row">
-          <button id="volToggle" class="tab active">Volume</button>
-          <button id="maToggle" class="tab active">MA</button>
-          <label class="muted" style="margin-left:10px;">MA1</label>
-          <input id="ma1" class="small-input" value="50" />
-          <label class="muted">MA2</label>
-          <input id="ma2" class="small-input" value="200" />
-        </div>
-        <div class="muted" id="status">Status: Idle</div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="toggleTheme" class="btn secondary">🌙</button>
+      <button id="fullscreenBtn" class="btn secondary">⤢</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div class="controls-row">
+        <button id="volToggle" class="tab active">Volume</button>
+        <button id="maToggle" class="tab active">MA</button>
+        <label class="muted" style="margin-left:10px;">MA1</label>
+        <input id="ma1" class="small-input" value="50" />
+        <label class="muted">MA2</label>
+        <input id="ma2" class="small-input" value="200" />
       </div>
-
-      <div id="chart-area">
-        <div id="chart"></div>
-
-        <div class="side">
-          <div class="card">
-            <div class="muted">Symbol</div>
-            <div class="value" id="sym">BTCINR</div>
-          </div>
-          <div class="card">
-            <div class="muted">Last Price</div>
-            <div class="value" id="lastPrice">-</div>
-          </div>
-          <div class="card">
-            <div class="muted">24h Vol (approx)</div>
-            <div class="value" id="vol24">-</div>
-          </div>
-          <div class="card">
-            <div class="muted">MA (current)</div>
-            <div class="value" id="ma50Val">- / <span id="ma200Val">-</span></div>
-          </div>
-          <div class="card">
-            <div class="muted">Last update</div>
-            <div id="lastUpdate">-</div>
-          </div>
-        </div>
+      <div class="muted" id="status">Status: Connecting WS...</div>
+    </div>
+    <div id="chart-area">
+      <div id="chart"></div>
+      <div class="side">
+        <div class="card"><div class="muted">Symbol</div><div class="value" id="sym">BTCINR</div></div>
+        <div class="card"><div class="muted">Last Price</div><div class="value" id="lastPrice">-</div></div>
+        <div class="card"><div class="muted">24h Vol (approx)</div><div class="value" id="vol24">-</div></div>
+        <div class="card"><div class="muted">MA (current)</div><div class="value" id="ma50Val">- / <span id="ma200Val">-</span></div></div>
+        <div class="card"><div class="muted">Last update</div><div id="lastUpdate">-</div></div>
       </div>
     </div>
   </div>
+</div>
 
 <script>
-/* =========================
-   CONFIG
-   ========================= */
-// Map UI coins to WS/REST symbols (INR)
-const symbolMap = {
-  BTC: 'btcinr',
-  ETH: 'ethinr',
-  SOL: 'solinr',
-  XRP: 'xrpinr'
-};
-
-// WebSocket base URL (CHANGE THIS to your exchange WS endpoint if different).
-// Example: 'wss://your-exchange.example/ws' — must accept Binance-style SUBSCRIBE messages.
-const WS_BASE = 'wss://stream.binance.com:9443/ws'; // default — likely doesn't support INR. Change as needed.
-
-// Kline subscribe helper (Binance-style method)
-function wsSubscribeMsg(symbol, tf){ return JSON.stringify({ method:'SUBSCRIBE', params:[`${symbol}@kline_${tf}`], id:1 }); }
-function wsUnsubscribeMsg(symbol, tf){ return JSON.stringify({ method:'UNSUBSCRIBE', params:[`${symbol}@kline_${tf}`], id:1 }); }
-
-/* =========================
-   GLOBALS
-   ========================= */
-let currentCoin = 'BTC';
-let currentTF = '1m';
-let ws = null;
-let wsEnabled = false;
-let pollingTimer = null;
-let fullRefreshTimer = null;
-let lastCandles = [];
+const symbolMap = { BTC:'btcinr', ETH:'ethinr', SOL:'solinr', XRP:'xrpinr' };
+let currentCoin='BTC', currentTF='1m';
 let chart, candleSeries, volumeSeries, maShortSeries, maLongSeries;
-let showVolume = true;
-let showMA = true;
+let ws = null, showVolume=true, showMA=true, lastCandles=[];
 
-/* =========================
-   UTILITIES
-   ========================= */
-function fmt(n){ if(n==null) return '-'; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return Number(n).toFixed(2); }
-function nowStr(){ return new Date().toLocaleString(); }
+/* UTIL */
+function fmt(n){ if(n==null) return '-'; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return Number(n).toFixed(2);}
+function nowStr(){ return new Date().toLocaleString();}
 
-/* =========================
-   REST KLINES (WazirX INR fallback)
-   ========================= */
-async function fetchKlinesREST(coin, tf, limit=500){
-  // Use WazirX INR klines for fallback (public REST):
-  // endpoint: https://api.wazirx.com/api/v2/kline?symbol=btcinr&interval=1m&limit=200
-  const sym = symbolMap[coin];
-  const url = `https://api.wazirx.com/api/v2/kline?symbol=${sym}&interval=${tf}&limit=${limit}`;
-  try{
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('REST err '+res.status);
-    const raw = await res.json();
-    return raw.map(c => ({
-      time: Math.floor(c[0]/1000),
-      open: parseFloat(c[1]),
-      high: parseFloat(c[2]),
-      low: parseFloat(c[3]),
-      close: parseFloat(c[4]),
-      volume: parseFloat(c[5] ?? 0)
-    }));
-  }catch(e){
-    console.error('fetchKlinesREST error', e);
-    return [];
-  }
-}
-
-/* =========================
-   MA helper
-   ========================= */
+/* MA calculation */
 function calcMA(data, period){
-  const out = []; let sum = 0;
+  const out=[]; let sum=0;
   for(let i=0;i<data.length;i++){
-    sum += data[i].close;
-    if(i >= period) sum -= data[i-period].close;
-    if(i >= period-1) out.push({ time: data[i].time, value: sum/period });
+    sum+=data[i].close;
+    if(i>=period) sum-=data[i-period].close;
+    if(i>=period-1) out.push({time:data[i].time,value:sum/period});
   }
   return out;
 }
 
-/* =========================
-   Chart creation
-   ========================= */
+/* Chart setup */
 function createChart(isDark=false){
   if(chart) chart.remove();
-  const container = document.getElementById('chart');
-  chart = LightweightCharts.createChart(container, {
-    width: container.clientWidth,
-    height: container.clientHeight || 520,
-    layout: { backgroundColor: isDark ? '#071026' : 'transparent', textColor: isDark ? '#dbeafe' : '#07203a' },
-    grid: { vertLines:{ color: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)' }, horzLines:{ color: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)' } },
-    rightPriceScale: { visible:true, borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#ccc' },
-    timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#ccc' }
+  const container=document.getElementById('chart');
+  chart=LightweightCharts.createChart(container,{
+    width:container.clientWidth,
+    height:container.clientHeight||520,
+    layout:{backgroundColor:isDark?'#071026':'transparent',textColor:isDark?'#dbeafe':'#07203a'},
+    grid:{vertLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'},horzLines:{color:isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.06)'}},
+    rightPriceScale:{visible:true,borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'},
+    timeScale:{borderColor:isDark?'rgba(255,255,255,0.06)':'#ccc'}
   });
-
-  candleSeries = chart.addCandlestickSeries({
-    upColor: '#16a34a', borderUpColor:'#16a34a', wickUpColor:'#16a34a',
-    downColor:'#ef4444', borderDownColor:'#ef4444', wickDownColor:'#ef4444'
-  });
-
-  // Volume on separate price scale
-  volumeSeries = chart.addHistogramSeries({
-    priceFormat: { type: 'volume' },
-    priceScaleId: 'volume', // separate scale id
-    scaleMargins: { top: 0.8, bottom: 0 },
-    overlay: false
-  });
-
-  maShortSeries = chart.addLineSeries({ color:'#60a5fa', lineWidth:2 });
-  maLongSeries = chart.addLineSeries({ color:'#f59e0b', lineWidth:2 });
-
-  window.addEventListener('resize', ()=> chart && chart.applyOptions({ width: container.clientWidth, height: container.clientHeight || 520 }));
+  candleSeries=chart.addCandlestickSeries({upColor:'#16a34a',borderUpColor:'#16a34a',wickUpColor:'#16a34a',downColor:'#ef4444',borderDownColor:'#ef4444',wickDownColor:'#ef4444'});
+  volumeSeries=chart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume',scaleMargins:{top:0.8,bottom:0},overlay:false});
+  maShortSeries=chart.addLineSeries({color:'#60a5fa',lineWidth:2});
+  maLongSeries=chart.addLineSeries({color:'#f59e0b',lineWidth:2});
+  window.addEventListener('resize',()=>chart.applyOptions({width:container.clientWidth,height:container.clientHeight||520}));
 }
 
-/* =========================
-   Render full dataset
-   ========================= */
-async function renderFull(){
-  document.getElementById('status').innerText = 'Loading...';
-  const klines = await fetchKlinesREST(currentCoin, currentTF, 500);
-  if(!klines.length){ document.getElementById('status').innerText='No data'; return; }
-  lastCandles = klines;
-
-  candleSeries.setData(klines.map(c=>({ time:c.time, open:c.open, high:c.high, low:c.low, close:c.close })));
-  if(showVolume) volumeSeries.setData(klines.map(c=>({ time:c.time, value:c.volume, color: c.close >= c.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' })));
-  else volumeSeries.setData([]);
-
-  const ma1 = parseInt(document.getElementById('ma1').value) || 50;
-  const ma2 = parseInt(document.getElementById('ma2').value) || 200;
-  if(showMA){
-    const s1 = calcMA(klines, ma1);
-    const s2 = calcMA(klines, ma2);
-    maShortSeries.setData(s1);
-    maLongSeries.setData(s2);
-    markCrosses(s1, s2);
-    document.getElementById('ma50Val').innerText = s1.length ? Number(s1[s1.length-1].value).toFixed(2) : '-';
-    document.getElementById('ma200Val').innerText = s2.length ? Number(s2[s2.length-1].value).toFixed(2) : '-';
-  } else {
-    maShortSeries.setData([]); maLongSeries.setData([]); candleSeries.setMarkers([]);
-  }
-
-  const latest = klines[klines.length-1];
-  document.getElementById('sym').innerText = symbolMap[currentCoin].toUpperCase();
-  document.getElementById('lastPrice').innerText = latest.close.toLocaleString('en-IN',{maximumFractionDigits:2});
-  document.getElementById('vol24').innerText = fmt(klines.reduce((s,x)=>s+x.volume,0));
-  document.getElementById('lastUpdate').innerText = nowStr();
-  document.getElementById('status').innerText = 'Live';
-}
-
-/* =========================
-   Mark MA crosses
-   ========================= */
-function markCrosses(shortMA, longMA){
-  const markers = [];
-  const longMap = new Map(longMA.map(x=>[x.time,x.value]));
-  const shortMap = new Map(shortMA.map(x=>[x.time,x.value]));
-  const times = shortMA.map(x=>x.time).filter(t => longMap.has(t));
-  for(let i=1;i<times.length;i++){
-    const p = times[i-1], c = times[i];
-    const sPrev = shortMap.get(p), lPrev = longMap.get(p);
-    const sCurr = shortMap.get(c), lCurr = longMap.get(c);
-    if(sPrev < lPrev && sCurr >= lCurr){
-      markers.push({ time:c, position:'belowBar', color:'green', shape:'arrowUp', text:'Golden' });
-    } else if(sPrev > lPrev && sCurr <= lCurr){
-      markers.push({ time:c, position:'aboveBar', color:'red', shape:'arrowDown', text:'Death' });
+/* -----------------------
+  WS CONNECT
+----------------------- */
+function startWS(){
+  if(ws){ ws.close(); ws=null; }
+  const url='wss://stream.wazirx.com/ws';
+  ws=new WebSocket(url);
+  ws.onopen=()=>{ document.getElementById('status').innerText='WS Connected'; subscribeWS(); };
+  ws.onmessage=e=>{
+    const d=JSON.parse(e.data);
+    if(d.k){ // kline
+      const k=d.k;
+      const candle={time:Math.floor(k.t/1000),open:parseFloat(k.o),high:parseFloat(k.h),low:parseFloat(k.l),close:parseFloat(k.c),volume:parseFloat(k.v)};
+      const idx=lastCandles.findIndex(c=>c.time===candle.time);
+      if(idx>=0){ lastCandles[idx]=candle; candleSeries.update(candle); if(showVolume) volumeSeries.update({time:candle.time,value:candle.volume,color:candle.close>=candle.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}); }
+      else { lastCandles.push(candle); candleSeries.update(candle); if(showVolume) volumeSeries.update({time:candle.time,value:candle.volume,color:candle.close>=candle.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}); }
+      if(showMA){ const ma1=parseInt(document.getElementById('ma1').value)||50; const ma2=parseInt(document.getElementById('ma2').value)||200;
+        maShortSeries.setData(calcMA(lastCandles,ma1)); maLongSeries.setData(calcMA(lastCandles,ma2)); markCrosses(calcMA(lastCandles,ma1),calcMA(lastCandles,ma2)); }
+      document.getElementById('lastPrice').innerText=candle.close.toLocaleString('en-IN',{maximumFractionDigits:2});
+      document.getElementById('lastUpdate').innerText=nowStr();
     }
+  };
+  ws.onclose=()=>{ document.getElementById('status').innerText='WS Disconnected, reconnecting...'; setTimeout(startWS,3000); };
+  ws.onerror=()=>{ ws.close(); };
+}
+
+function subscribeWS(){
+  if(!ws || ws.readyState!==1) return;
+  const sym=symbolMap[currentCoin];
+  const subMsg={"method":"SUBSCRIBE","params":[`${sym}@kline_${currentTF}`],"id":1};
+  ws.send(JSON.stringify(subMsg));
+}
+
+/* -----------------------
+  Render historical via REST first
+----------------------- */
+async function fetchKlinesREST(coin,tf,limit=500){
+  const sym=symbolMap[coin];
+  const url=`https://api.wazirx.com/api/v2/kline?symbol=${sym}&interval=${tf}&limit=${limit}`;
+  const res=await fetch(url); const raw=await res.json();
+  return raw.map(c=>({time:Math.floor(c[0]/1000),open:parseFloat(c[1]),high:parseFloat(c[2]),low:parseFloat(c[3]),close:parseFloat(c[4]),volume:parseFloat(c[5]||0)}));
+}
+async function renderFull(){ const klines=await fetchKlinesREST(currentCoin,currentTF,500); lastCandles=klines;
+  candleSeries.setData(klines.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
+  if(showVolume) volumeSeries.setData(klines.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}))); else volumeSeries.setData([]);
+  if(showMA){ const ma1=parseInt(document.getElementById('ma1').value)||50; const ma2=parseInt(document.getElementById('ma2').value)||200;
+    const s1=calcMA(klines,ma1); const s2=calcMA(klines,ma2); maShortSeries.setData(s1); maLongSeries.setData(s2); markCrosses(s1,s2);
+    document.getElementById('ma50Val').innerText=s1.length?s1[s1.length-1].value.toFixed(2):'-';
+    document.getElementById('ma200Val').innerText=s2.length?s2[s2.length-1].value.toFixed(2):'-';
+  }
+  const latest=klines[klines.length-1]; document.getElementById('sym').innerText=symbolMap[currentCoin].toUpperCase();
+  document.getElementById('lastPrice').innerText=latest.close.toLocaleString('en-IN',{maximumFractionDigits:2});
+  document.getElementById('vol24').innerText=fmt(klines.reduce((s,x)=>s+x.volume,0));
+  document.getElementById('lastUpdate').innerText=nowStr();
+}
+
+/* -----------------------
+  MA Cross Markers
+----------------------- */
+function markCrosses(shortMA,longMA){
+  const markers=[]; const longMap=new Map(longMA.map(x=>[x.time,x.value])); const shortMap=new Map(shortMA.map(x=>[x.time,x.value]));
+  const times=shortMA.map(x=>x.time).filter(t=>longMap.has(t));
+  for(let i=1;i<times.length;i++){ const prev=times[i-1], curr=times[i];
+    const sPrev=shortMap.get(prev), lPrev=longMap.get(prev), sCurr=shortMap.get(curr), lCurr=longMap.get(curr);
+    if(sPrev<lPrev && sCurr>=lCurr) markers.push({time:curr,position:'belowBar',color:'green',shape:'arrowUp',text:'Golden'});
+    else if(sPrev>lPrev && sCurr<=lCurr) markers.push({time:curr,position:'aboveBar',color:'red',shape:'arrowDown',text:'Death'});
   }
   candleSeries.setMarkers(markers);
 }
 
-/* =========================
-   Polling update (fallback)
-   ========================= */
-async function updateLast(){
-  if(!lastCandles.length) return;
-  const small = await fetchKlinesREST(currentCoin, currentTF, 3);
-  if(!small.length) return;
-  const last = small[small.length-1];
-  const stored = lastCandles[lastCandles.length-1];
-  if(stored && stored.time === last.time){
-    lastCandles[lastCandles.length-1] = last;
-  } else if(stored && last.time > stored.time){
-    lastCandles.push(last);
-    if(lastCandles.length > 2000) lastCandles.shift();
-  }
-  candleSeries.update({ time:last.time, open:last.open, high:last.high, low:last.low, close:last.close });
-  if(showVolume) volumeSeries.update({ time:last.time, value:last.volume, color: last.close>=last.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' });
-  if(showMA){
-    const ma1 = parseInt(document.getElementById('ma1').value)||50;
-    const ma2 = parseInt(document.getElementById('ma2').value)||200;
-    maShortSeries.setData(calcMA(lastCandles, ma1));
-    maLongSeries.setData(calcMA(lastCandles, ma2));
-    markCrosses(calcMA(lastCandles, ma1), calcMA(lastCandles, ma2));
-  }
-  document.getElementById('lastPrice').innerText = last.close.toLocaleString('en-IN',{maximumFractionDigits:2});
-  document.getElementById('lastUpdate').innerText = nowStr();
-}
-
-/* =========================
-   WebSocket (Binance-style SUBSCRIBE JSON)
-   ========================= */
-function startWebSocket(){
-  if(ws && ws.readyState === WebSocket.OPEN) return;
-  try{ ws = new WebSocket(WS_BASE); }catch(e){ console.warn('WS open failed', e); ws = null; setWS(false); return; }
-  ws.onopen = ()=> {
-    setWS(true);
-    // subscribe
-    try{ ws.send(wsSubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){ console.warn('WS send sub failed', e); }
-    document.getElementById('status').innerText = 'WS connected';
-  };
-  ws.onmessage = (ev)=>{
-    try{
-      const p = JSON.parse(ev.data);
-      // Binance-style kline payload shape -> p.k
-      const k = p.k ?? (p.data && p.data.k) ?? null;
-      if(k){
-        const t = Math.floor(k.t/1000);
-        const o = parseFloat(k.o), h = parseFloat(k.h), l = parseFloat(k.l), c = parseFloat(k.c), v = parseFloat(k.v||0);
-        candleSeries.update({ time:t, open:o, high:h, low:l, close:c });
-        if(showVolume) volumeSeries.update({ time:t, value:v, color: c>=o ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' });
-        if(lastCandles.length && lastCandles[lastCandles.length-1].time === t){
-          lastCandles[lastCandles.length-1] = { time:t, open:o, high:h, low:l, close:c, volume:v };
-        } else if(!lastCandles.length || t > lastCandles[lastCandles.length-1].time){
-          lastCandles.push({ time:t, open:o, high:h, low:l, close:c, volume:v });
-          if(lastCandles.length>2000) lastCandles.shift();
-        }
-        if(showMA){
-          const ma1 = parseInt(document.getElementById('ma1').value)||50;
-          const ma2 = parseInt(document.getElementById('ma2').value)||200;
-          maShortSeries.setData(calcMA(lastCandles, ma1));
-          maLongSeries.setData(calcMA(lastCandles, ma2));
-          markCrosses(calcMA(lastCandles, ma1), calcMA(lastCandles, ma2));
-        }
-        document.getElementById('lastPrice').innerText = c.toLocaleString('en-IN',{maximumFractionDigits:2});
-        document.getElementById('lastUpdate').innerText = nowStr();
-      }
-    }catch(e){}
-  };
-  ws.onerror = (e)=>{ console.warn('WS error', e); setWS(false); attemptFallbackPolling(); };
-  ws.onclose = ()=>{ setWS(false); attemptFallbackPolling(); };
-}
-
-function stopWebSocket(){
-  if(!ws) return;
-  try{ ws.send(wsUnsubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){}
-  try{ ws.close(); }catch(e){}
-  ws = null; setWS(false);
-}
-
-function setWS(on){
-  wsEnabled = !!on;
-  const btn = document.getElementById('wsToggle');
-  btn.innerText = on ? 'WS: ON' : 'WS: OFF';
-  btn.classList.toggle('active', on);
-  document.getElementById('status').innerText = on ? 'WS connected' : 'WS disconnected';
-}
-
-/* =========================
-   Polling fallback & timers
-   ========================= */
-function attemptFallbackPolling(){
-  clearInterval(pollingTimer);
-  pollingTimer = setInterval(async ()=>{ if(ws && ws.readyState===WebSocket.OPEN) return; await updateLast(); }, 3000);
-}
-function startFullRefresh(){
-  clearInterval(fullRefreshTimer);
-  fullRefreshTimer = setInterval(async ()=>{ if(ws && ws.readyState===WebSocket.OPEN) return; if(!document.hasFocus()) return; await renderFull(); }, 60*1000);
-}
-
-/* =========================
-   UI interactions
-   ========================= */
-async function changeSymbolOrTF(newCoin, newTF){
-  // unsubscribe existing
-  if(ws && ws.readyState===WebSocket.OPEN){
-    try{ ws.send(wsUnsubscribeMsg(symbolMap[currentCoin], currentTF)); }catch(e){}
-  }
-  currentCoin = newCoin || currentCoin;
-  currentTF = newTF || currentTF;
-  document.querySelectorAll('#coinTabs .tab').forEach(t=> t.classList.toggle('active', t.dataset.coin === currentCoin));
-  document.querySelectorAll('#tfTabs .tab').forEach(t=> t.classList.toggle('active', t.dataset.tf === currentTF));
+/* -----------------------
+  UI EVENTS
+----------------------- */
+async function changeSymbolOrTF(newCoin,newTF){
+  currentCoin=newCoin||currentCoin; currentTF=newTF||currentTF;
+  document.querySelectorAll('#coinTabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.coin===currentCoin));
+  document.querySelectorAll('#tfTabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tf===currentTF));
   createChart(document.body.classList.contains('dark'));
-  await renderFull();
-  if(wsEnabled) { stopWebSocket(); startWebSocket(); }
+  await renderFull(); startWS();
 }
 
-document.addEventListener('DOMContentLoaded', async ()=>{
-  createChart(false);
-  await renderFull();
-  attemptFallbackPolling();
-  startFullRefresh();
+document.addEventListener('DOMContentLoaded',async ()=>{
+  createChart(false); await renderFull(); startWS();
 
-  // coin tabs
-  document.querySelectorAll('#coinTabs .tab').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{ await changeSymbolOrTF(e.currentTarget.dataset.coin, currentTF); document.getElementById('sym').innerText = symbolMap[e.currentTarget.dataset.coin].toUpperCase(); });
-  });
+  document.querySelectorAll('#coinTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>await changeSymbolOrTF(e.currentTarget.dataset.coin,currentTF)));
+  document.querySelectorAll('#tfTabs .tab').forEach(btn=>btn.addEventListener('click',async e=>await changeSymbolOrTF(currentCoin,e.currentTarget.dataset.tf)));
 
-  // timeframe tabs
-  document.querySelectorAll('#tfTabs .tab').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{ await changeSymbolOrTF(currentCoin, e.currentTarget.dataset.tf); });
+  document.getElementById('toggleTheme').addEventListener('click',async ()=>{
+    const isDark=document.body.classList.toggle('dark'); createChart(isDark); await renderFull();
   });
+  document.getElementById('fullscreenBtn').addEventListener('click',async ()=>{ try{ if(!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }catch(e){} });
 
-  // WS toggle
-  document.getElementById('wsToggle').addEventListener('click', ()=>{
-    const turnOn = !wsEnabled;
-    if(turnOn) startWebSocket();
-    else stopWebSocket();
-  });
-
-  // theme toggle
-  document.getElementById('toggleTheme').addEventListener('click', ()=>{
-    const darkNow = !document.body.classList.toggle('dark');
-    document.body.classList.toggle('dark');
-    createChart(document.body.classList.contains('dark'));
-    renderFull();
-    document.getElementById('toggleTheme').innerText = document.body.classList.contains('dark') ? '☀️' : '🌙';
-  });
-
-  // fullscreen
-  document.getElementById('fullscreenBtn').addEventListener('click', async ()=>{
-    try{ if(!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }catch(e){}
-  });
-
-  // volume toggle
-  document.getElementById('volToggle').addEventListener('click', (e)=>{
-    showVolume = !showVolume;
-    e.currentTarget.classList.toggle('active', showVolume);
-    if(showVolume) volumeSeries.setData(lastCandles.map(c=>({ time:c.time, value:c.volume, color:c.close>=c.open ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)' })));
-    else volumeSeries.setData([]);
-  });
-
-  // MA toggle & changes
-  document.getElementById('maToggle').addEventListener('click', async (e)=>{
-    showMA = !showMA;
-    e.currentTarget.classList.toggle('active', showMA);
-    if(showMA) await renderFull();
-    else { maShortSeries.setData([]); maLongSeries.setData([]); candleSeries.setMarkers([]); }
-  });
-  document.getElementById('ma1').addEventListener('change', async ()=>{ if(showMA) await renderFull(); });
-  document.getElementById('ma2').addEventListener('change', async ()=>{ if(showMA) await renderFull(); });
+  document.getElementById('volToggle').addEventListener('click',e=>{ showVolume=!showVolume; e.currentTarget.classList.toggle('active',showVolume); if(showVolume) volumeSeries.setData(lastCandles.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'}))); else volumeSeries.setData([]); });
+  document.getElementById('maToggle').addEventListener('click',async e=>{ showMA=!showMA; e.currentTarget.classList.toggle('active',showMA); await renderFull(); });
+  document.getElementById('ma1').addEventListener('change',async ()=>{ if(showMA) await renderFull(); });
+  document.getElementById('ma2').addEventListener('change',async ()=>{ if(showMA) await renderFull(); });
 });
-
-/* cleanup */
-window.addEventListener('beforeunload', ()=>{ try{ stopWebSocket(); }catch(e){} clearInterval(pollingTimer); clearInterval(fullRefreshTimer); });
 </script>
 </body>
 </html>
